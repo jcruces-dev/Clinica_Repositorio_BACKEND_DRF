@@ -1,5 +1,5 @@
-# RECORDAR QUE ACÁ SOLO VÁ LA CONFIGURACION DEL TASK, OSEA LA HORA A LA CUAL 
-# YO QUIERO QUE EJECUTE MI ARCHIVO QUE SE ENCUENTRA EN VIEWS.PY DE LA CARPETA 
+# RECORDAR QUE ACÁ SOLO VÁ LA CONFIGURACION DEL TASK, OSEA LA HORA A LA CUAL
+# YO QUIERO QUE EJECUTE MI ARCHIVO QUE SE ENCUENTRA EN VIEWS.PY DE LA CARPETA
 # APP RESERVA LA CUAL CONTIENE EL CÓDIGO PARA OBTENER LAS RESERVAS.
 # BaseCommand: Es la clase "padre" de la que debe heredar tu comando para que Django lo reconozca como una herramienta de gestión.
 from django.core.management.base import BaseCommand
@@ -31,7 +31,7 @@ env = environ.Env()
 # Calculamos la ruta a la raíz del proyecto (3 niveles arriba de este archivo)
 # management/commands/obtener_reservas.py -> commands -> management -> Reservas -> RAIZ
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-environ.Env.read_env(os.path.join(BASE_DIR, '.env')) 
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 class Command(BaseCommand):
     help = 'Pide las reservas a la API de la Clínica a las 06:00 AM'
@@ -39,8 +39,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             print("Recibiendo peticion de MICROSERVICIOS")
-            
-
             # Obtener la fecha actual.
             fecha_today = date.today()
             # Obtener la hora actual de Chile
@@ -54,7 +52,7 @@ class Command(BaseCommand):
             # Filtrar en la BD de la Clínica Por la fecha actual y las reservas que comiencn en una hora más.
             reservas_por_notificar = ReservaModel.objects.filter(
                 fecha_reserva=ahora_chile.date(),
-                hora_inicio=hora_objetivo.time() 
+                hora_inicio=hora_objetivo.time()
             )
             # Adjuntar imagen al correo.
             for reserva in reservas_por_notificar:
@@ -64,9 +62,11 @@ class Command(BaseCommand):
                 # Este es el método que encripta la reserva_uuid y genera el link de confirmación para el correo.
                 # El archivo se encuentra en reserva/utils.py.
                 link = generar_link_confirmacion(reserva.reserva_uuid)
+                print(f"Verificamos el links con el token encriptado: {link}")
+                # Necesitamos obtener el nombre del paciente completo.
                 # Preparar el contexto (Renderizamos primero)
                 html_content = render_to_string('confirmacion_reserva.html', {
-                    'nombre_paciente': f"{reserva.paciente.primer_nombre} {reserva.paciente.ap_paterno}",
+                    'nombre_paciente': f"{reserva.nombre_paciente}",
                     'hora_inicio': reserva.hora_inicio,
                     'fecha_reserva': reserva.fecha_reserva,
                     'url_confirmar': f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{link}",
@@ -94,5 +94,4 @@ class Command(BaseCommand):
         except Exception as err:
             print(f"Unexpected {err=}, {type(err)=}")
             self.stdout.write(self.style.ERROR(f"Error de conexión: {str(err)}"))
-            
-            
+
