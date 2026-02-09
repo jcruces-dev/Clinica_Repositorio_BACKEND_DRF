@@ -21,3 +21,5 @@ class ReservaModel(models.Model):
     direccion_clinica = models.CharField(null=True, max_length=250)
     reserva_cerrada = models.IntegerField(null=True, blank=True, default=0)
     pago_realizado = models.IntegerField(null=True, blank=True, default=0)
+    reser_confirmada = models.IntegerField(null=True, blank=True, default=0)
+    reser_anulada = models.IntegerField(null=True, blank=True, default=0)

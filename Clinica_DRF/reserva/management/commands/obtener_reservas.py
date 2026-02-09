@@ -22,6 +22,10 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMessage, EmailMultiAlternatives,send_mail
 # Este es laimportación del metodo de encriptacion de la reserva_uuid que se envía por URL.
 from reserva.utils import generar_link_confirmacion
+from paciente.models import PacienteModel
+from paciente.serializers import PacienteSerializer
+from paciente_no_registrado.models import PacienteNoRegisterModel
+from paciente_no_registrado.serializers import PacienteNoRegisterSerializer
 
 
 # Buena práctica, se debe inicializar afuera de la clase.
@@ -44,54 +48,78 @@ class Command(BaseCommand):
             # Obtener la hora actual de Chile
             chile_tz = pytz.timezone('America/Santiago')
             ahora_chile = timezone.now().astimezone(chile_tz)
-            print(f"Hora actual en Chile: {ahora_chile}")
-            # Calcular qué hora será en 60 minutos más (ignorando minutos/segundos)
-            # Ejemplo: Si son las 07:05, buscaremos citas de las 08:00
-            hora_objetivo = (ahora_chile + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-            print(f"Buscando reservas para la hora: {hora_objetivo.time()}")
-            # Filtrar en la BD de la Clínica Por la fecha actual y las reservas que comiencn en una hora más.
+            # 1. Definimos el inicio del rango (ahora mismo)
+            inicio_rango = ahora_chile
+            # 2. Definimos el fin del rango (ejemplo: en 60 minutos más)
+            fin_rango = ahora_chile + timedelta(minutes=60)
+            print(f"Buscando reservas entre las {inicio_rango.time()} y las {fin_rango.time()}")
+            # Ajustamos el filtro en la base de datos
             reservas_por_notificar = ReservaModel.objects.filter(
                 fecha_reserva=ahora_chile.date(),
-                hora_inicio=hora_objetivo.time()
+                hora_inicio__gte=inicio_rango.time(),
+                hora_inicio__lt=fin_rango.time()
             )
+            # Declaramos una variable para almacenar el nombre del paciente.
+            nombre_pac_completo = ""
             # Adjuntar imagen al correo.
             for reserva in reservas_por_notificar:
-                self.stdout.write(f"Reserva ID: {reserva.id}, Hora Inicio: {reserva.hora_inicio}")
-                # Esta es la ruta donde se encuentra la imagen del correo de confirmación de serva.
-                path_img_confirmacion = os.path.join(settings.BASE_DIR, 'static', 'img_confirmacion', 'Banner_confirmacion.png')
-                # Este es el método que encripta la reserva_uuid y genera el link de confirmación para el correo.
-                # El archivo se encuentra en reserva/utils.py.
-                link = generar_link_confirmacion(reserva.reserva_uuid)
-                print(f"Verificamos el links con el token encriptado: {link}")
-                # Necesitamos obtener el nombre del paciente completo.
-                # Preparar el contexto (Renderizamos primero)
-                html_content = render_to_string('confirmacion_reserva.html', {
-                    'nombre_paciente': f"{reserva.nombre_paciente}",
-                    'hora_inicio': reserva.hora_inicio,
-                    'fecha_reserva': reserva.fecha_reserva,
-                    'url_confirmar': f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{link}",
-                    'url_anular': f"https://tu-dominio.com/reserva/anular/{reserva.reserva_uuid}",
-                })
-                #'url_confirmar': f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{link}",
-                # 2. Crear el objeto de correo (Luego instanciamos)
-                email = EmailMultiAlternatives(
-                    subject="Confirmación de su Reserva - Clínica",
-                    body="Contenido en HTML",
-                    from_email=settings.EMAIL_HOST_USER,
-                    to=[reserva.paciente.email]
-                )
-                email.attach_alternative(html_content, "text/html")
+                print("Ingresamos")
+                if reserva.reser_confirmada == 0 and reserva.reser_anulada == 0:
+                    self.stdout.write(f"Reserva ID: {reserva.id}, Hora Inicio: {reserva.hora_inicio}")
+                    # Obtenemos el nombre del paciente para el correo.
+                    print(reserva.fk_pac_no_register)
+                    print(reserva.fk_usuario.id)
+                    if reserva.fk_pac_no_register is not None:
+                        paciente_no_registrado = PacienteNoRegisterModel.objects.filter(id=reserva.fk_pac_no_register.id).first()
+                        nombre_pac_completo = paciente_no_registrado.primer_nombre + " " + paciente_no_registrado.segundo_nombre + " " + paciente_no_registrado.ap_paterno + " " + paciente_no_registrado.ap_materno
+                        print(f"Paciente No Registrado: {nombre_pac_completo}")
+                    # Obtenemos el nombre del paciente Registrado.
+                    if reserva.fk_usuario is not None:
+                        print("Ingresamos al Paciente Registrado")
+                        paciente_registrado = PacienteModel.objects.filter(id=reserva.fk_usuario.id).first()
+                        nombre_pac_completo = paciente_registrado.primer_nombre + " " + paciente_registrado.segundo_nombre + " " + paciente_registrado.ap_paterno + " " + paciente_registrado.ap_materno
+                    print(f"Nombre del paciente para el correo: {nombre_pac_completo}")
+                    # Esta es la ruta donde se encuentra la imagen del correo de confirmación de serva.
+                    path_img = os.path.join(settings.BASE_DIR, 'static', 'img', 'img_confirmacion', 'Banner_confirmacion.png')
+                    # Este es el método que encripta la reserva_uuid y genera el link de confirmación para el correo.
+                    # El archivo se encuentra en reserva/utils.py.
+                    link = generar_link_confirmacion(reserva.reserva_uuid)
+                    print(f"Verificamos el links con el token encriptado: {link}")
+                    # Necesitamos obtener el nombre del paciente completo.
+                    # Preparar el contexto (Renderizamos primero)
+                    html_content = render_to_string('pacientes/confirmacion_reserva_pac.html', {
+                        'nombre_paciente': nombre_pac_completo,
+                        'hora_inicio': reserva.hora_inicio,
+                        'fecha_reserva': reserva.fecha_reserva,
+                        'especialidad': reserva.especialidad,
+                        'nombre_doctor': reserva.nombre_doctor,
+                        'nombre_clinica': reserva.nombre_clinica,
+                        'url_confirmar': f"https://tu-dominio.com/reserva/api/confirmar_correo_reservas/{link}/",
+                        'url_anular': f"https://tu-dominio.com/reserva/anular/{reserva.reserva_uuid}",
+                    })
+                    print("Pasamos")
+                    #'url_confirmar': f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{link}",
+                    # 2. Crear el objeto de correo (Luego instanciamos)
+                    email = EmailMultiAlternatives(
+                        subject="Confirmación de su Reserva - Clínica",
+                        body="Contenido en HTML",
+                        from_email=settings.EMAIL_HOST_USER,
+                        # Esto se debe modificar cuando este funcionando para que tome el correo correcto del usuario.
+                        #to=[reserva.paciente.email]
+                        to=["matiasfamilycrew@gmail.com"]
+                    )
+                    email.attach_alternative(html_content, "text/html")
 
-                # 3. Adjuntar la imagen (Al final, usando el objeto email ya creado)
-                path_img = os.path.join(settings.BASE_DIR, 'static', 'img_confirmacion', 'Banner_confirmacion.png')
-                with open(path_img, 'rb') as f:
-                    banner = MIMEImage(f.read())
-                    banner.add_header('Content-ID', '<banner_clinica>')
-                    email.attach(banner)
-
-                # email.send() # Descomenta para enviar
-                #email.send()
+                    # Adjuntar la imagen (Al final, usando el objeto email ya creado)
+                    path_img = os.path.join(settings.BASE_DIR, 'static', 'img', 'img_confirmacion', 'Banner_confirmacion.png')
+                    with open(path_img, 'rb') as f:
+                        banner = MIMEImage(f.read())
+                        banner.add_header('Content-ID', '<banner_clinica>')
+                        email.attach(banner)
+                    email.send()
+                    print("Final Correo")
+                else:
+                    print(f"Reserva ID: {reserva.id} ya confirmada o anulada, no se envía correo.")
         except Exception as err:
             print(f"Unexpected {err=}, {type(err)=}")
             self.stdout.write(self.style.ERROR(f"Error de conexión: {str(err)}"))
-
