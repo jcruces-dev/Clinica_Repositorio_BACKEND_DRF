@@ -50,6 +50,10 @@ from django.conf import settings
 #----- Librería para crear PDF -------------------------------------------------
 import pdfkit
 #----- Fin Librería para crear PDF ---------------------------------------------
+#
+from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
+
+
 
 # Create your views here.
 @api_view(['GET'])
@@ -1845,17 +1849,44 @@ def pdf_res_pagada_pac(template, nombre_paciente, emailSender):
         return Response({'error': 0}, status=400)
 
 
+# Este método es solo de prueba de consumo de microservicio por parte de un proyecto aparte el cual le realiza la petición.
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def listar_reservas(request):
     try:
-        print("Ingresamos Correctamente a Listar Reservas")
+        print("Recibiendo peticion de MICROSERVICIOSDRF")
         # Obtener la fecha actual.
         fecha_today = date.today()
         # Realizamos el filtro para obtener las reservas del día actual.
         all_reservas = ReservaModel.objects.filter(fecha_reserva=fecha_today)
         serializer = ReservaSerializer(all_reservas, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as err:
+        print(f"Unexpected {err=}, {type(err)=}")
+        return Response({'error': 1}, status=400)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def confirmar_correo_reservas(request, reserva_uuid):
+    try:
+        print("Obteniendo la Reserva_uuid de correo para actualizar la BD de confirmación.")
+        print(f"Reserva_uuid: {reserva_uuid}")
+        token = request.GET.get('token')
+        signer = TimestampSigner()
+        try:
+            unsigned_value = signer.unsign(token, max_age=60*60*24)  # El token es válido por 24 horas
+            print(f"Token válido. Valor sin firmar: {unsigned_value}")
+            # Aquí puedes actualizar la base de datos para marcar la reserva como confirmada
+            reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+            reserva.confirmada = True
+            reserva.save()
+            return Response({'success': 'Correo confirmado y reserva actualizada.'}, status=200)
+        except SignatureExpired:
+            print("El token ha expirado.")
+            return Response({'error': 'El enlace ha expirado.'}, status=400)
+        except BadSignature:
+            print("El token no es válido.")
+            return Response({'error': 'Enlace no válido.'}, status=400)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)

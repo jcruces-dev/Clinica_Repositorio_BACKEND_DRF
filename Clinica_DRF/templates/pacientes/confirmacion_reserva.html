@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirmación de Reserva</title>
+    <style>
+      /* Estilos de los links de confirmacion o anular ... */
+      @media screen and (max-width: 600px) {
+        .column-responsive {
+          display: block !important;
+          width: 100% !important;
+        }
+        .button-link {
+          width: 100% !important;
+          /* Agregamos el margen inferior para separarlos al apilarse */
+          margin-bottom: 15px !important; 
+          display: block !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f8f9fa">
+        <tr>
+            <td align="center" style="padding: 20px 0;">
+                <div style="max-width: 600px; width: 100%; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">                   
+                    <img src="../../static/img/img_confirmacion/Banner_confirmacion.png" style="width: 100%; max-width: 600px; height: auto; display: block;" alt="Banner">
+                    <div style="padding: 20px;">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-family: Arial, sans-serif;">
+                            <tr>
+                                <td class="data-column" width="50%" valign="top" style="padding: 10px 5px; text-align: left;">
+                                    <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Paciente</div>
+                                    <div style="font-weight: bold; font-size: 14px; color: #333;">{{ nombre_paciente }}</div>
+                                </td>
+                                <td class="data-column" width="50%" valign="top" style="padding: 10px 5px; text-align: left;">
+                                    <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Fecha</div>
+                                    <div style="font-weight: bold; font-size: 14px; color: #333;">{{ fecha_reserva }}</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="data-column" width="50%" valign="top" style="padding: 10px 5px; text-align: left;">
+                                    <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Hora</div>
+                                    <div style="font-weight: bold; font-size: 14px; color: #333;">{{ hora_inicio }}</div>
+                                </td>
+                                <td class="data-column" width="50%" valign="top" style="padding: 10px 5px; text-align: left;">
+                                    <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Especialidad</div>
+                                    <div style="font-weight: bold; font-size: 14px; color: #333;">{{ especialidad }}</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="data-column" width="50%" valign="top" style="padding: 10px 5px; text-align: left;">
+                                    <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Doctor</div>
+                                    <div style="font-weight: bold; font-size: 14px; color: #333;">{{ nombre_doctor }}</div>
+                                </td>
+                                <td class="data-column" width="50%" valign="top" style="padding: 10px 5px; text-align: left;">
+                                    <div style="color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">Sucursal</div>
+                                    <div style="font-weight: bold; font-size: 14px; color: #333;">Central Clínica</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <!-- <div style="padding: 0 25px 25px 25px;">
+                        <a href="{{ url_anular }}" style="background-color: #777; color: white; padding: 15px; display: block; text-decoration: none; border-radius: 5px; margin-bottom: 12px; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">ANULAR CITA</a>
+                        <a href="{{ url_confirmar }}" style="background-color: #4166f5; color: white; padding: 15px; display: block; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">CONFIRMAR ASISTENCIA</a>
+                    </div> -->
+                    <div style="padding: 0 25px 25px 25px;">
+                        <a href="{{ url_anular }}" style="background-color: #777; color: white; padding: 15px; display: block; text-decoration: none; border-radius: 5px; margin-bottom: 12px; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">ANULAR CITA</a>
+                        <a href="https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas" style="background-color: #4166f5; color: white; padding: 15px; display: block; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center; font-family: Arial, sans-serif;">CONFIRMAR ASISTENCIA</a>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: center; font-size: 12px; color: #666; font-family: Arial, sans-serif;">
+                    Por favor <strong>Realizar la Confirmación</strong> antes de las 24 horas.
+                </div>
+            </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

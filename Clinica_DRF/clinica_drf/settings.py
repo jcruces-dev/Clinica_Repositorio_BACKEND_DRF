@@ -90,7 +90,7 @@ ROOT_URLCONF = 'clinica_drf.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # Colocamos la ruta templates para lostemplate de los correos que se enviaran.
+        # Colocamos la ruta templates para los template de los correos que se enviaran.
         'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {

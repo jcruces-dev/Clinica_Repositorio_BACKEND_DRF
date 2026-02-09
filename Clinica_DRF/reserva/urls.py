@@ -41,5 +41,8 @@ urlpatterns = [
     ##############################################################################################################################
     # Esa ruta es solo para el microservicio de reservas. COMO PRUEBA.
     path('reserva/api/listar_reservas/', views.listar_reservas, name='listar_reservas'),
+    #path('reserva/confirma_reserva/<str:reserva_uuid>/', views.confirma_reserva, name='confirma_reserva'),
+    #path('reserva/anular_reserva/<str:reserva_uuid>/', views.anular_reserva, name='anular_reserva'),
     ##############################################################################################################################
+    path('reserva/api/confirmar_correo_reservas/<str:reserva_uuid>/', views.confirmar_correo_reservas, name='confirmar_correo_reservas'),
 ]

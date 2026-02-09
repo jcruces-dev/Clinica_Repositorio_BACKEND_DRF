@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirmación de Reserva</title>
+    <style>
+      .section-title {
+        background-color: #c6a2e7;
+        padding: 10px;
+        font-weight: bold;
+        border-top: 2px solid #000;
+      }
+      .data-row {
+        display: flex;
+        border-bottom: 1px solid #ddd;
+      }
+      .data-label {
+        flex: 1;
+        font-weight: bold;
+        padding: 8px;
+        background-color: #e8e3f0;
+      }
+      .data-value {
+        flex: 2;
+        padding: 8px;
+      }
+      .warning {
+        background-color: #ffcccc;
+        padding: 15px;
+        text-align: center;
+        margin: 20px 0;
+        border: 1px solid red;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: #f8f9fa;
+        padding: 20px;
+      }
+      .payment-section {
+        background-color: #fff3cd;
+        padding: 15px;
+        margin-top: 20px;
+        border-left: 4px solid #ffc107;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 style="text-align: center; color: #383737;">Respuesta Consulta</h1>
+      <div style="text-align: center;">
+        <img src="cid:logo_clinica" alt="Logo Clínica" style="width: 100%; height: 150px;">
+      </div>
+      <div class="warning">
+        <strong>Información Respuesta:</strong> Este correo contiene la información sobre su consulta.
+      </div>
+      <!-- Datos del paciente -->
+      <div class="section-title">Datos del Paciente</div>
+      <div class="data-row">
+        <div class="data-label">Nombre:</div>
+        <div class="data-value">{{nombre_paciente}}</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">Email:</div>
+        <div class="data-value">{{email}}</div>
+      </div>
+
+      <!-- Detalles de la reserva -->
+      <div class="section-title">Detalles de la Respuesta</div>
+      <div class="data-row">
+        <div class="data-label">Fecha Consulta: </div>
+        <div class="data-value">{{fecha_consulta}}</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">Respuesta: </div>
+        <div class="data-value">{{respuesta}}</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">Fecha Respuesta Consulta: </div>
+        <div class="data-value">{{fecha_respuesta}}</div>
+      </div>
+      <div style="margin-top: 30px; text-align: center; font-size: 0.9em; color: #666;">
+        Por favor <strong>No Responder este Correo</strong>
+      </div>
+    </div>
+  </body>
+</html>
