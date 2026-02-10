@@ -94,7 +94,7 @@ class Command(BaseCommand):
                         'especialidad': reserva.especialidad,
                         'nombre_doctor': reserva.nombre_doctor,
                         'nombre_clinica': reserva.nombre_clinica,
-                        'url_confirmar': f"https://tu-dominio.com/reserva/api/confirmar_correo_reservas/{link}/",
+                        'url_confirmar': link,
                         'url_anular': f"https://tu-dominio.com/reserva/anular/{reserva.reserva_uuid}",
                     })
                     print("Pasamos")
@@ -116,7 +116,13 @@ class Command(BaseCommand):
                         banner = MIMEImage(f.read())
                         banner.add_header('Content-ID', '<banner_clinica>')
                         email.attach(banner)
-                    email.send()
+                    try:
+                        print("Intentando enviar correo...")
+                        email.send()
+                        print("Correo enviado exitosamente.")
+                    except Exception as err:
+                        print(f"Aviso: No se pudo enviar el correo físico por restricciones de red del servidor: {err}")
+                        print(f"PRUEBA ESTE LINK EN TU NAVEGADOR: {link}")
                     print("Final Correo")
                 else:
                     print(f"Reserva ID: {reserva.id} ya confirmada o anulada, no se envía correo.")

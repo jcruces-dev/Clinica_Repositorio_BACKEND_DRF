@@ -1878,9 +1878,10 @@ def confirmar_correo_reservas(request, reserva_uuid):
             print(f"Token válido. Valor sin firmar: {unsigned_value}")
             # Aquí puedes actualizar la base de datos para marcar la reserva como confirmada
             reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-            reserva.confirmada = True
+            reserva.reser_confirmada = 1
             reserva.save()
-            return Response({'success': 'Correo confirmado y reserva actualizada.'}, status=200)
+            # USA RENDER DIRECTO PARA EVITAR ERRORES DE REDIRECCIÓN POR AHORA
+            return render(request, 'pacientes/web_confirmacion.html')
         except SignatureExpired:
             print("El token ha expirado.")
             return Response({'error': 'El enlace ha expirado.'}, status=400)

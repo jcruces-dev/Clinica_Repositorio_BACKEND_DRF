@@ -45,4 +45,6 @@ urlpatterns = [
     #path('reserva/anular_reserva/<str:reserva_uuid>/', views.anular_reserva, name='anular_reserva'),
     ##############################################################################################################################
     path('reserva/api/confirmar_correo_reservas/<str:reserva_uuid>/', views.confirmar_correo_reservas, name='confirmar_correo_reservas'),
+    #
+    #path('confirmacion-exitosa/', views.vista_exito, name='web_confirmacion_success'),
 ]

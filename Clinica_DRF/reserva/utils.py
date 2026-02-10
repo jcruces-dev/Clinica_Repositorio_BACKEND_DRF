@@ -10,5 +10,5 @@ def generar_link_confirmacion(reserva_uuid):
     token = signer.sign(reserva_uuid)
     # Esto viene siuendo la reserva_uuid.
     params = urlencode({'token': token})
-    url = f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{params}"
+    url = f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{reserva_uuid}/?{params}"
     return url
