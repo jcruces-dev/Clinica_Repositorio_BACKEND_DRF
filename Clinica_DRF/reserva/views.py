@@ -1880,7 +1880,7 @@ def confirmar_correo_reservas(request, reserva_uuid):
             reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
             reserva.reser_confirmada = 1
             reserva.save()
-            # USA RENDER DIRECTO PARA EVITAR ERRORES DE REDIRECCIÓN POR AHORA
+            # USAMOS RENDER DIRECTO PARA EVITAR ERRORES DE REDIRECCIÓN.
             return render(request, 'pacientes/web_confirmacion.html')
         except SignatureExpired:
             print("El token ha expirado.")
