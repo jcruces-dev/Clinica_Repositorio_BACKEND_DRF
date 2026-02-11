@@ -151,6 +151,10 @@ USE_I18N = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+# Esta es la ruta donde Django buscará archivos estáticos en desarrollo
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 # Esta es la línea que falta y que causa el error en la consola:
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Default primary key field type
