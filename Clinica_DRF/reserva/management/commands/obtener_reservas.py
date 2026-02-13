@@ -20,8 +20,8 @@ from email.mime.image import MIMEImage
 from django.template.loader import render_to_string
 # Mensaje del E-mail.
 from django.core.mail import EmailMessage, EmailMultiAlternatives,send_mail
-# Este es laimportación del metodo de encriptacion de la reserva_uuid que se envía por URL.
-from reserva.utils import generar_link_confirmacion
+# Este es la importación del método de encriptacion de la reserva_uuid que se envía por URL.
+from reserva.utils import generar_link_anulacion, generar_link_confirmacion
 from paciente.models import PacienteModel
 from paciente.serializers import PacienteSerializer
 from paciente_no_registrado.models import PacienteNoRegisterModel
@@ -84,7 +84,9 @@ class Command(BaseCommand):
                     # Este es el método que encripta la reserva_uuid y genera el link de confirmación para el correo.
                     # El archivo se encuentra en reserva/utils.py.
                     link = generar_link_confirmacion(reserva.reserva_uuid)
+                    link_anulacion = generar_link_anulacion(reserva.reserva_uuid)
                     print(f"Verificamos el links con el token encriptado: {link}")
+                    print(f"Verificamos el link de anulación: {link_anulacion}")
                     # Necesitamos obtener el nombre del paciente completo.
                     # Preparar el contexto (Renderizamos primero)
                     html_content = render_to_string('pacientes/confirmacion_reserva_pac.html', {
@@ -95,7 +97,7 @@ class Command(BaseCommand):
                         'nombre_doctor': reserva.nombre_doctor,
                         'nombre_clinica': reserva.nombre_clinica,
                         'url_confirmar': link,
-                        'url_anular': f"https://tu-dominio.com/reserva/anular/{reserva.reserva_uuid}",
+                        'url_anular': link_anulacion,
                     })
                     print("Pasamos")
                     #'url_confirmar': f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{link}",

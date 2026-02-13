@@ -1891,3 +1891,35 @@ def confirmar_correo_reservas(request, reserva_uuid):
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
+
+# Método para anular una reserva con el correo de confirmacion y anular reserva.
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def anular_reserva(request, reserva_uuid):
+    try:
+        print("Obteniendo la Reserva_uuid de correo para anular la reserva.")
+        #print(f"Reserva_uuid: {reserva_uuid}")
+        token = request.GET.get('token')
+        signer = TimestampSigner()
+        try:
+            # El token es válido por 24 horas
+            unsigned_value = signer.unsign(token, max_age=60*60*24)
+            print(f"Token válido. Valor sin firmar: {unsigned_value}")
+            # Aquí actualizamos la base de datos para marcar la reserva como anulada.
+            reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+            reserva.fecha_reserva = None
+            reserva.hora_inicio = None
+            reserva.hora_termino = None
+            reserva.reser_anulada = 1
+            reserva.save()
+            # USAMOS RENDER DIRECTO PARA EVITAR ERRORES DE REDIRECCIÓN.
+            return render(request, 'pacientes/web_anular_cita.html')
+        except SignatureExpired:
+            print("El token ha expirado.")
+            return Response({'error': 'El enlace ha expirado.'}, status=400)
+        except BadSignature:
+            print("El token no es válido.")
+            return Response({'error': 'Enlace no válido.'}, status=400)
+    except Exception as err:
+        print(f"Unexpected {err=}, {type(err)=}")
+        return Response({'error': 1}, status=400)

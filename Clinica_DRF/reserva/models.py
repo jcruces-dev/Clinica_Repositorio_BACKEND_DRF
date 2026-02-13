@@ -7,7 +7,7 @@ from paciente_no_registrado.models import PacienteNoRegisterModel
 class ReservaModel(models.Model):
     fecha_creacion_reserva = models.DateTimeField(default=now)
     usuario_creacion_reserva = models.CharField(null=True, max_length=250)
-    fecha_reserva = models.DateField()
+    fecha_reserva = models.DateField(null=True, blank=True)
     hora_inicio = models.TimeField(default="00:00:00")
     hora_termino = models.TimeField(default="00:00:00")
     especialidad = models.CharField(null=True, max_length=200)

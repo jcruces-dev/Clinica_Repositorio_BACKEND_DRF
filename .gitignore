@@ -1,8 +1,0 @@
-# Ignora archivos compilados de Python.
-*.pyc
-# Ignora carpetas de caché de Python.
-__pycache__/
-# Ignora tu entorno virtual local.
-venv/
-# Ignora variables de entorno (normalmente sensibles)
-.env

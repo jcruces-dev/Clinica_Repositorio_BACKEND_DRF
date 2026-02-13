@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anulación de Reserva</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: 'Segoe UI', Helvetica, Arial, sans-serif;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; margin-top: 20px; margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        
+        <tr>
+            <td align="center" style="padding: 0; background-color: #ffffff;">
+                <img src="{% static 'img/img_confirmacion/Banner_anulacion.png' %}" 
+                     alt="Confirmación de Anulación" 
+                     width="600" 
+                     style="display: block; width: 100%; max-width: 600px; height: auto; border: 0; margin: 0 auto;">
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 40px 30px; text-align: center;">
+                <h1 style="color: #1a237e; font-size: 26px; margin-top: 0; margin-bottom: 15px; font-weight: 700;">¡Cita Anulada con Éxito!</h1>
+                
+                <div style="margin-bottom: 25px;">
+                    <table align="center" border="0" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td align="center" style="background-color: #4caf50; border-radius: 50%; width: 64px; height: 64px;">
+                                <span style="color: #ffffff; font-size: 36px; line-height: 64px;">&#10003;</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <p style="color: #4a4a4a; font-size: 16px; line-height: 1.7; margin-bottom: 25px;">
+                    Le confirmamos que su solicitud ha sido procesada correctamente. Los horarios de su reserva han sido <strong>liberados</strong> en nuestro sistema médico.
+                </p>
+
+                <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #f0f7ff; border-left: 4px solid #1a237e; border-radius: 4px; margin-bottom: 10px;">
+                    <tr>
+                        <td style="padding: 15px 20px; color: #1a237e; font-size: 14px; text-align: left; line-height: 1.5;">
+                            <strong>Información del Sistema:</strong> Su disponibilidad anterior (fecha y hora) ya se encuentra visible para otros pacientes que requieran atención.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px; background-color: #f8f9fa; text-align: center; color: #7f8c8d; font-size: 12px; border-top: 1px solid #eeeeee;">
+                <p style="margin: 0 0 10px 0;">Este es un mensaje automático generado por el sistema de la Clínica DRF.</p>
+                <p style="margin: 0;">&copy; 2026 Clínica DRF | Calidad y Compromiso Médico</p>
+            </td>
+        </tr>
+    </table>
+</body>
+<script src="{% static 'js/anular_reserva.js' %}"></script>
+</html>
