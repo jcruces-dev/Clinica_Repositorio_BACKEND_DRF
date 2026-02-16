@@ -1898,7 +1898,7 @@ def confirmar_correo_reservas(request, reserva_uuid):
 def anular_reserva(request, reserva_uuid):
     try:
         print("Obteniendo la Reserva_uuid de correo para anular la reserva.")
-        #print(f"Reserva_uuid: {reserva_uuid}")
+        print(f"Reserva_uuid: {reserva_uuid}")
         token = request.GET.get('token')
         signer = TimestampSigner()
         try:

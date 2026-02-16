@@ -47,5 +47,5 @@ urlpatterns = [
     path('reserva/api/confirmar_correo_reservas/<str:reserva_uuid>/', views.confirmar_correo_reservas, name='confirmar_correo_reservas'),
     #
     #path('reserva/api/anular_reserva_correo_reservas/<str:reserva_uuid>/', views.anular_reserva, name='anular_reserva'),
-    path('reserva/api/anular_reserva_correo_reservas/<str:reserva_uuid>/', views.anular_reserva, name='anular_reserva'),
+    path('reserva/api/anular_reserva_paciente_correo/<str:reserva_uuid>/', views.anular_reserva, name='anular_reserva'),
 ]
