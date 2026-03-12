@@ -227,6 +227,7 @@ def crear_paciente_index_registrar(request):
             paciente = PacienteSerializer(data=paciente_data)
             if paciente.is_valid():
                 paciente_instancia = paciente.save()
+                correo_dato_inicial_pac_registrado(primer_nombre, segundo_nombre, ap_paterno, ap_materno, rut, username, password, email)
                 # group = Group.objects.get(name='Paciente')
                 # usuario.groups.add(group)
                 paciente_id = PacienteModel.objects.get(pk=paciente_instancia.id)
@@ -267,7 +268,7 @@ def crear_paciente_index_registrar(request):
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=status.HTTP_400_BAD_REQUEST)
 
-# Crear Paciente Panel ADMIN.
+# Crear Paciente Panel ADMIN y SECRETARIA.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def crear_paciente(request):
