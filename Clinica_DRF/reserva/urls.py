@@ -29,7 +29,9 @@ urlpatterns = [
     # Obtener el diagnostico delpaciente.
     path('reserva/diagnostico_historial_pac/<int:id_usuario>/<str:cod_reserva>/', views.diagnostico_historial_pac, name='diagnostico_historial_pac'),
     # Verificar coid reserva Panel Pagar Reserva.
-    path('reserva/cod_reserva_verificacion', views.cod_reserva_verificacion, name='cod_reserva_verificacion'),
+    path('reserva/cod_reserva_verificacion/', views.cod_reserva_verificacion, name='cod_reserva_verificacion'),
+    # Verificar coid reserva Panel Pagar Reserva.
+    path('reserva/cod_reserva_verificacion_index/', views.cod_reserva_verificacion_index, name='cod_reserva_verificacion_index'),
     #
     path('reserva/update_pago_debito_reserva/<str:reserva_uuid>/', views.update_pago_debito_reserva, name='update_pago_debito_reserva'),
     #
@@ -38,6 +40,10 @@ urlpatterns = [
     path('reserva/pago_debito_reserva_index', views.pago_debito_reserva_index, name='pago_debito_reserva_index'),
     # Esta ruta es del pago con CRÉDITO de la reserva en el Index.
     path('reserva/pago_credito_reserva_index', views.pago_credito_reserva_index, name='pago_credito_reserva_index'),
+    ##############################################################################################################################
+    # Ruta de solo pago Debito de la reserva en el pago_reserva.html.
+    path('reserva/pago_debito_solo_reserva', views.pago_debito_solo_reserva, name='pago_debito_solo_reserva'),
+    ##############################################################################################################################
     ##############################################################################################################################
     # Esa ruta es solo para el microservicio de reservas. COMO PRUEBA.
     path('reserva/api/listar_reservas/', views.listar_reservas, name='listar_reservas'),
