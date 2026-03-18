@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 700px;
+            margin: 20px auto;
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .header p {
+            margin: 5px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #2c3e50;
+            text-transform: uppercase;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            margin-top: 25px;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 8px 0;
+            vertical-align: top;
+            font-size: 14px;
+        }
+        .label {
+            color: #7f8c8d;
+            width: 35%;
+        }
+        .value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .payment-summary {
+            background-color: #fcfcfc;
+            border: 1px dashed #d0d0d0;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 4px;
+        }
+        .total-row {
+            font-size: 18px;
+            color: #2c3e50;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 11px;
+            color: #bdc3c7;
+            background-color: #fafafa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            background-color: #27ae60;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Comprobante de Pago</h1>
+            <p>{{ nombre_clinica }}</p>
+        </div>
+
+        <div class="content">
+            <div class="section-title">Información del Paciente</div>
+            <table class="info-table">
+                <tr>
+                    <td class="label">Paciente:</td>
+                    <td class="value">{{ nombre_paciente }}</td>
+                </tr>
+                <tr>
+                    <td class="label">RUT / Identificación:</td>
+                    <td class="value">{{ rut_paciente }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Correo electrónico:</td>
+                    <td class="value">{{ email_paciente }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Teléfono de contacto:</td>
+                    <td class="value">{{ fono_paciente }}</td>
+                </tr>
+            </table>
+
+            <div class="section-title">Detalles de la Reserva</div>
+            <table class="info-table">
+                <tr>
+                    <td class="label">Especialidad:</td>
+                    <td class="value">{{ especialidad }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Médico Tratante:</td>
+                    <td class="value">{{ nombre_doctor }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Fecha de Atención:</td>
+                    <td class="value">{{ fecha_reserva }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Horario:</td>
+                    <td class="value">{{ hora_inicio }} - {{ hora_termino }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Sucursal:</td>
+                    <td class="value">{{ direccion_clinica }}, {{ comuna_clinica }}</td>
+                </tr>
+            </table>
+
+            <div class="payment-summary">
+                <div class="section-title" style="margin-top:0;">Resumen Financiero</div>
+                <table class="info-table">
+                    <tr>
+                        <td class="label">Código de Transacción:</td>
+                        <td class="value" style="font-family: monospace;">
+                            {% if tipo_pago == 'Crédito' %}{{ credito_uuid }}{% else %}{{ debito_uuid }}{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">Método de Pago:</td>
+                        <td class="value">{{ tipo_pago }}</td>
+                    </tr>
+
+                    {% if tipo_pago == 'Crédito' %}
+                    <tr>
+                        <td class="label">Cuotas:</td>
+                        <td class="value">{{ cant_cuotas }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Valor Cuota:</td>
+                        <td class="value">${{ monto_cuotas }}</td>
+                    </tr>
+                    {% endif %}
+
+                    <tr>
+                        <td class="label">Estado:</td>
+                        <td class="value"><span class="badge">Pagado</span></td>
+                    </tr>
+                    <tr class="total-row">
+                        <td class="label" style="color: #2c3e50; font-weight: bold;">Monto Total:</td>
+                        <td class="value" style="font-size: 20px; color: #27ae60;">${{ valor_especialidad }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            Este es un documento oficial de {{ nombre_clinica }}.<br>
+            Fecha de emisión: {{ fecha_pago }} | ID Reserva: {{ reserva_uuid }}
+        </div>
+    </div>
+</body>
+</html>

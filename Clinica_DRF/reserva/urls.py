@@ -43,6 +43,8 @@ urlpatterns = [
     ##############################################################################################################################
     # Ruta de solo pago Debito de la reserva en el pago_reserva.html.
     path('reserva/pago_debito_solo_reserva', views.pago_debito_solo_reserva, name='pago_debito_solo_reserva'),
+    # Ruta de solo pago Crédito de la reserva en el pago_reserva.html.
+    path('reserva/pago_credito_solo_reserva', views.pago_credito_solo_reserva, name='pago_credito_solo_reserva'),
     ##############################################################################################################################
     ##############################################################################################################################
     # Esa ruta es solo para el microservicio de reservas. COMO PRUEBA.
