@@ -20,7 +20,7 @@ from reserva.serializers import ReservaSerializer
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) 
+@permission_classes([AllowAny])
 def obtener_respuesta(request):
     try:
         # Recibimos la pregunta del usuario.
@@ -32,7 +32,7 @@ def obtener_respuesta(request):
         # Si no existe pregunta, enviamos el error.
         if not pregunta:
             return Response({'error': 'Pregunta vacía'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Revisamos si trae opcion seleccionda por el paciente.
         match opcion:
             case 2:
@@ -41,11 +41,12 @@ def obtener_respuesta(request):
                     reserva_info = ReservaModel.objects.get(reserva_uuid=pregunta)
                     estado_reserva = "Anulada" if reserva_info.reser_anulada == 1 else "Activa"
                     color_estado = "#dc3545" if reserva_info.reser_anulada == 1 else "#28a745"
-                    
+
                     #
-                    reserva_cerrada = "No" if reserva_info.pago_realizado == 1 else "Si"
-                    color_estado_cerrada = "#dc3545" if reserva_info.pago_realizado == 1 else "#28a745"
-                    
+                    reserva_cerrada = "Si" if reserva_info.pago_realizado == 1 else "No"
+                    # El color debe ser verde (#28a745) si está pagada (1) y rojo (#dc3545) si no (0).
+                    color_estado_cerrada = "#28a745" if reserva_info.pago_realizado == 1 else "#dc3545"
+
                     # Creamos una estructura HTML elegante
                     respuesta_demo = f"""
                     <div class="reserva-card">
@@ -79,16 +80,16 @@ def obtener_respuesta(request):
                     reserva.hora_termino = None
                     reserva.reser_anulada = 1
                     reserva.save()
-                    
+
                     # Dependiendo de la opción cambiamos el color.
                     reserva_info = ReservaModel.objects.get(reserva_uuid=pregunta)
                     estado_reserva = "Anulada" if reserva_info.reser_anulada == 1 else "Activa"
                     color_estado = "#dc3545" if reserva_info.reser_anulada == 1 else "#28a745"
-                    
+
                     #
                     reserva_cerrada = "No" if reserva_info.pago_realizado == 1 else "Si"
                     color_estado_cerrada = "#dc3545" if reserva_info.pago_realizado == 1 else "#28a745"
-                    
+
                     # Código si coincide con valor2
                     respuesta_demo = f"""
                     <div class="reserva-card">
@@ -120,12 +121,12 @@ def obtener_respuesta(request):
                             </button>
                         </div>
                     """
-                    }   
+                    }
                     return Response({'respuesta': respuesta_data}, status=status.HTTP_200_OK)
                 except ReservaModel.DoesNotExist:
                     return Response({'respuesta': "❌ No encontré una reserva con ese código."}, status=status.HTTP_404_NOT_FOUND)
             case _:
-                # En caso de Activar OpenIA, solo se debe reestablecer al código de abajo. 
+                # En caso de Activar OpenIA, solo se debe reestablecer al código de abajo.
                 # if True:  # ← Cambia esto a una variable de configuración si deseas
                 #     return Response({'respuesta': respuesta_demo}, status=status.HTTP_200_OK)
                 # El guion bajo es el "default" (si nada coincide)
