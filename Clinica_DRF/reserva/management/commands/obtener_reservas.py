@@ -65,16 +65,15 @@ class Command(BaseCommand):
             for reserva in reservas_por_notificar:
                 print("Ingresamos")
                 if reserva.reser_confirmada == 0 and reserva.reser_anulada == 0:
-                    self.stdout.write(f"Reserva ID: {reserva.id}, Hora Inicio: {reserva.hora_inicio}")
+                    # self.stdout.write(f"Reserva ID: {reserva.id}, Hora Inicio: {reserva.hora_inicio}")
                     # Obtenemos el nombre del paciente para el correo.
-                    print(reserva.fk_pac_no_register)
-                    print(reserva.fk_usuario.id)
-                    if reserva.fk_pac_no_register is not None:
+                    if reserva.fk_pac_no_register.id is not None:
                         paciente_no_registrado = PacienteNoRegisterModel.objects.filter(id=reserva.fk_pac_no_register.id).first()
                         nombre_pac_completo = paciente_no_registrado.primer_nombre + " " + paciente_no_registrado.segundo_nombre + " " + paciente_no_registrado.ap_paterno + " " + paciente_no_registrado.ap_materno
                         print(f"Paciente No Registrado: {nombre_pac_completo}")
                     # Obtenemos el nombre del paciente Registrado.
-                    if reserva.fk_usuario is not None:
+                    # reserva.fk_usuario.id is not None
+                    else:
                         print("Ingresamos al Paciente Registrado")
                         paciente_registrado = PacienteModel.objects.filter(id=reserva.fk_usuario.id).first()
                         nombre_pac_completo = paciente_registrado.primer_nombre + " " + paciente_registrado.segundo_nombre + " " + paciente_registrado.ap_paterno + " " + paciente_registrado.ap_materno
@@ -85,8 +84,6 @@ class Command(BaseCommand):
                     # El archivo se encuentra en reserva/utils.py.
                     link = generar_link_confirmacion(reserva.reserva_uuid)
                     link_anulacion = generar_link_anulacion(reserva.reserva_uuid)
-                    print(f"Verificamos el links con el token encriptado: {link}")
-                    print(f"Verificamos el link de anulación: {link_anulacion}")
                     # Necesitamos obtener el nombre del paciente completo.
                     # Preparar el contexto (Renderizamos primero)
                     html_content = render_to_string('pacientes/confirmacion_reserva_pac.html', {
@@ -99,8 +96,6 @@ class Command(BaseCommand):
                         'url_confirmar': link,
                         'url_anular': link_anulacion,
                     })
-                    print("Pasamos")
-                    #'url_confirmar': f"https://jacruces91.pythonanywhere.com/reserva/api/confirmar_correo_reservas/{link}",
                     # 2. Crear el objeto de correo (Luego instanciamos)
                     email = EmailMultiAlternatives(
                         subject="Confirmación de su Reserva - Clínica",
@@ -124,7 +119,6 @@ class Command(BaseCommand):
                         print("Correo enviado exitosamente.")
                     except Exception as err:
                         print(f"Aviso: No se pudo enviar el correo físico por restricciones de red del servidor: {err}")
-                        print(f"PRUEBA ESTE LINK EN TU NAVEGADOR: {link}")
                     print("Final Correo")
                 else:
                     print(f"Reserva ID: {reserva.id} ya confirmada o anulada, no se envía correo.")

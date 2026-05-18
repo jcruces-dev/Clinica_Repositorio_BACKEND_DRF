@@ -195,21 +195,21 @@ def reserva_paciente_index(request):
             else:
                 fecha = None
                 print(f"Advertencia: Reserva {res.id} sin fecha")
-            
+
             # Validar hora inicio
             if res.hora_inicio:
                 hora_inicio = res.hora_inicio.strftime('%H:%M:%S')
             else:
                 hora_inicio = None
                 print(f"Advertencia: Reserva {res.id} sin hora inicio")
-            
+
             # Validar hora término
             if res.hora_termino:
                 hora_termino = res.hora_termino.strftime('%H:%M:%S')
             else:
                 hora_termino = None
                 print(f"Advertencia: Reserva {res.id} sin hora término")
-            
+
             # Construir start/end solo si tenemos todos los datos necesarios
             if fecha and hora_inicio and hora_termino:
                 start = f"{fecha}T{hora_inicio}"
@@ -218,7 +218,7 @@ def reserva_paciente_index(request):
                 # Si falta algún dato, no incluimos esta reserva en el calendario
                 print(f"Reserva {res.id} omitida del calendario por datos incompletos")
                 continue  # Saltar esta reserva
-            
+
             arr.append({
                 'id_reserva': res.id,
                 'nombre_doctor': res.nombre_doctor,
@@ -507,7 +507,7 @@ def pago_credito_reserva_index(request):
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
-    
+
 # Método para generar el PDF de una cita reservada por el INDEX.
 def generar_correo_reserv_index(reserva_uuid, tipo_pago):
     try:
@@ -821,20 +821,43 @@ def delete_pac_reserva(request, fk_usuario):
         res_uuid = request.data.get('res_uuid')
         print(res_uuid)
         print(fk_usuario)
-        #
-        user = CustomersUsers.objects.get(pk=fk_usuario)
-        nombre_paciente = user.first_name + ' ' + user.last_name
-        #
+        # Obtenemos el dato del paciente.
+        paciente = PacienteModel.objects.get(fk_user=fk_usuario)
+        nombre_paciente = paciente.primer_nombre + ' ' + paciente.segundo_nombre + ' ' + paciente.ap_paterno + ' ' + paciente.ap_materno
+        print(nombre_paciente)
         datos = []
         # Serializar los datos
         reserva = ReservaModel.objects.filter(reserva_uuid=res_uuid)
         reserva.delete()
-        res_pac = ReservaModel.objects.filter(fk_usuario=user.id)
-        print(reserva)
-        for res in res_pac:
-            #
-            datos.append({'id': fk_usuario, 'nombre_paciente': nombre_paciente,'fecha_reserva': res.fecha_reserva, 'especialidad': res.especialidad, 'nombre_doctor': res.nombre_doctor, 'tipo_pago': res.tipo_pago, 'cod_reserva': res.reserva_uuid, 'comuna_clinica': res.comuna_clinica, 'direccion_clinica': res.direccion_clinica, 'nombre_clinica': res.nombre_clinica, 'hora_inicio': res.hora_inicio, 'hora_termino': res.hora_termino})
-        return Response({'reserva':datos},
+        # Obtener Todas las Reservas del Paciente.
+        reservas = ReservaModel.objects.filter(fk_usuario=fk_usuario)
+        for res in reservas:
+            print(res.fecha_creacion_reserva)
+        # Serializar las reservas.
+        reservas_serializadas = ReservaSerializer(reservas, many=True)
+        # Modificar los datos directamente a partir de los datos serializados.
+        res = [
+            {
+                'fecha_creacion_reserva': reserv['fecha_creacion_reserva'],
+                'fecha_reserva': reserv['fecha_reserva'],
+                'especialidad': reserv['especialidad'],
+                'nombre_doctor': reserv['nombre_doctor'],
+                'tipo_pago': reserv['tipo_pago'],
+                'reserva_uuid': reserv['reserva_uuid'],
+                'comuna_clinica': reserv['comuna_clinica'],
+                'fk_usuario': reserv['fk_usuario'],
+                'direccion_clinica': reserv['direccion_clinica'],
+                'nombre_clinica': reserv['nombre_clinica'],
+                'hora_inicio': reserv['hora_inicio'],
+                'hora_termino': reserv['hora_termino'],
+                'pago_realizado': reserv['pago_realizado'],
+                'reserva_cerrada': reserv['reserva_cerrada'],
+                'nombre_paciente': nombre_paciente
+            }
+            for reserv in reservas_serializadas.data
+        ]
+        print(res)
+        return Response({'reserva':res},
                         # Específicamos el status.
                         status=status.HTTP_200_OK)
     except Exception as err:
@@ -1254,7 +1277,7 @@ def cod_reserva_verificacion_index(request):
                 arr.append(datos_paciente)
 
             return Response({'datos': arr}, status=status.HTTP_200_OK)
-        
+
         return Response({'error': 2}, status=status.HTTP_404_NOT_FOUND)
 
     except Exception as err:
@@ -2027,7 +2050,7 @@ def anular_reserva(request, reserva_uuid):
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
-    
+
 # Pagar la reserva esto es cuando la secretaria realiza la reserva del paciente, por ende, no fue pagada esa reserva.
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -2038,11 +2061,11 @@ def pago_debito_solo_reserva(request):
         reserva_uuid = data.get("cod_reserva_pagar")
         # Validar que existe el código
         if not reserva_uuid:
-            return Response({'error': 0}, 
+            return Response({'error': 0},
                            status=status.HTTP_400_BAD_REQUEST)
         # Buscar la reserva
         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-        
+
         # Actualizamos el campo pago_realizado a 1 (pagado).
         reserva.pago_realizado = 1
         # 0 para débito
@@ -2122,7 +2145,7 @@ def pago_debito_solo_reserva(request):
                 if not os.path.exists(carpeta_destino):
                     os.makedirs(carpeta_destino)
                     print(f"Carpeta creada en: {carpeta_destino}")
-                
+
                 # Ruta completa final del PDF
                 ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
@@ -2198,7 +2221,7 @@ def pago_debito_solo_reserva(request):
                 if not os.path.exists(carpeta_destino):
                     os.makedirs(carpeta_destino)
                     print(f"Carpeta creada en: {carpeta_destino}")
-                
+
                 #  Ruta completa final del PDF
                 ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
@@ -2220,7 +2243,7 @@ def pago_debito_solo_reserva(request):
                 # Usamos la misma variable dinámica para asegurar que encuentre el archivo
                 emailSender.attach_file(ruta_final_pdf)
                 emailSender.send()
-            
+
             return Response({'reserva_pagada': reserva_uuid},
                             # Específicamos el status.
                             status=status.HTTP_200_OK)
@@ -2228,7 +2251,7 @@ def pago_debito_solo_reserva(request):
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 0}, status=400)
-    
+
 # Pagar la reserva esto es cuando la secretaria realiza la reserva del paciente, por ende, no fue pagada esa reserva.
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -2240,11 +2263,11 @@ def pago_credito_solo_reserva(request):
         cant_cuotas = data.get("cuota")
         # Validar que existe el código
         if not reserva_uuid:
-            return Response({'error': 0}, 
+            return Response({'error': 0},
                            status=status.HTTP_400_BAD_REQUEST)
         # Buscar la reserva
         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-        
+
         # Actualizamos el campo pago_realizado a 1 (pagado).
         reserva.pago_realizado = 1
         # 1 para crédito
@@ -2281,7 +2304,7 @@ def pago_credito_solo_reserva(request):
         insertar_credito = CreditoSerializer(data=credito)
         if insertar_credito.is_valid():
             insertar_credito.save()
-            # Verificamos el tipo de Paciente. 
+            # Verificamos el tipo de Paciente.
             print("Verificacion de Paciente")
             if reserva.fk_usuario is not None:
                 print("Paciente Registrado.")
@@ -2337,7 +2360,7 @@ def pago_credito_solo_reserva(request):
                 if not os.path.exists(carpeta_destino):
                     os.makedirs(carpeta_destino)
                     print(f"Carpeta creada en: {carpeta_destino}")
-                
+
                 # Ruta completa final del PDF
                 ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
@@ -2415,7 +2438,7 @@ def pago_credito_solo_reserva(request):
                 if not os.path.exists(carpeta_destino):
                     os.makedirs(carpeta_destino)
                     print(f"Carpeta creada en: {carpeta_destino}")
-                
+
                 #  Ruta completa final del PDF
                 ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
@@ -2437,7 +2460,7 @@ def pago_credito_solo_reserva(request):
                 # Usamos la misma variable dinámica para asegurar que encuentre el archivo
                 emailSender.attach_file(ruta_final_pdf)
                 emailSender.send()
-            
+
             return Response({'reserva_pagada': reserva_uuid},
                             # Específicamos el status.
                             status=status.HTTP_200_OK)

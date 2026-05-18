@@ -28,38 +28,38 @@ from django.contrib.auth.models import Group
 #
 import os
 # Verificar si el usuario existe con este import, en caso de no, envía ERROR.
-from django.shortcuts import get_object_or_404 
-# En Django REST Framework (DRF), los decoradores authentication_classes y 
-# permission_classes se utilizan para configurar y aplicar las políticas de autenticación y 
+from django.shortcuts import get_object_or_404
+# En Django REST Framework (DRF), los decoradores authentication_classes y
+# permission_classes se utilizan para configurar y aplicar las políticas de autenticación y
 # permisos a las vistas de la API.
-# permission_classes; Este decorador se utiliza para especificar las clases de permisos que se 
-# deben usar para una vista específica. Los permisos determinan si un usuario tiene el derecho 
+# permission_classes; Este decorador se utiliza para especificar las clases de permisos que se
+# deben usar para una vista específica. Los permisos determinan si un usuario tiene el derecho
 # de realizar una acción específica en la API. Algunas de las clases de permisos comunes en DRF incluyen:
 # AllowAny: Permite acceso sin restricciones, tanto a usuarios autenticados como no autenticados.
 # IsAuthenticated: Permite acceso solo a usuarios autenticados.
 # IsAdminUser: Permite acceso solo a usuarios administradores (donde user.is_staff es True).
-# IsAuthenticatedOrReadOnly: Permite a los usuarios autenticados realizar cualquier solicitud, 
+# IsAuthenticatedOrReadOnly: Permite a los usuarios autenticados realizar cualquier solicitud,
 # y a los usuarios no autenticados solo realizar solicitudes de lectura (GET, HEAD, OPTIONS)
 from rest_framework.decorators import authentication_classes, permission_classes, api_view
 # La clase IsAuthenticated es un permiso en DRF que verifica si el usuario que realiza la solicitud está autenticado.
 # Cuando se establece IsAuthenticated como permiso para una vista, solo los usuarios autenticados podrán acceder a esa vista. Los usuarios no autenticados no tendrán permiso para realizar la solicitud
 from rest_framework.permissions import IsAuthenticated, AllowAny
 # Proceso de Autenticación
-# Obtención del Token: Cuando un usuario se autentica, intercambia su nombre de usuario y 
+# Obtención del Token: Cuando un usuario se autentica, intercambia su nombre de usuario y
 # contraseña por un token único. Este token se genera y almacena en la base de datos asociado al usuario.
-# Uso del Token: En solicitudes subsiguientes, el cliente debe incluir este token en el encabezado 
+# Uso del Token: En solicitudes subsiguientes, el cliente debe incluir este token en el encabezado
 # Authorization de la solicitud HTTP. El formato típico es Authorization: Token <token_value>
 from rest_framework.authentication import TokenAuthentication
-#from rest_framework.decorators import 
+#from rest_framework.decorators import
 from datetime import datetime, date
 # render_to_string; Sirve para enviar el HTML del correo.-------------------
-from django.template.loader import render_to_string 
+from django.template.loader import render_to_string
 # Mensaje del E-mail.
 from django.core.mail import EmailMessage
 #
 from django.conf import settings
 #----- Librería para crear PDF -------------------------------------------------
-import pdfkit 
+import pdfkit
 #----- Fin Librería para crear PDF ---------------------------------------------
 
 # Create your views here.
@@ -123,7 +123,7 @@ def obtener_clin_secretaria(request, id_user):
                 'comuna_clinica': clinica.comuna_clinica,
                 'direccion_clinica': clinica.direccion_clinica,
             })
-        # 
+        #
         return Response({'clinicas':arr},
                         # Específicamos el status.
                         status=status.HTTP_200_OK)
@@ -151,8 +151,8 @@ def agregar_clin_secretaria_panel_adm(request):
                 'comuna_clinica': clin.comuna_clinica,
                 'direccion_clinica': clin.direccion_clinica,
             })
-            
-        # 
+
+        #
         return Response({'clinicas':arr},
                         # Específicamos el status.
                         status=status.HTTP_200_OK)
@@ -345,11 +345,11 @@ def update_secretaria(request, id):
             'email': email,
         }
         serializer = CustomUserSerializer(user, data=user_dato, partial=True)
-        # 
+        #
         if serializer.is_valid():
-            # 
+            #
             id_user = serializer.save()
-            # 
+            #
             secretaria = SecretariaModel.objects.get(fk_user=id_user)
             # Creamos el array de objetos.
             secre_dato = {
@@ -475,7 +475,7 @@ def delete_clin_secretaria(request, id_clin, id_user_secret):
                 'comuna_clinica': clinica.comuna_clinica,
                 'direccion_clinica': clinica.direccion_clinica,
             })
-        # 
+        #
         return Response({'secretarias':arr},
                         # Específicamos el status.
                         status=status.HTTP_200_OK)
@@ -500,7 +500,7 @@ def listar_datos_secretaria(request, username):
             'primer_nombre': secretaria.primer_nombre,
             'segundo_nombre': secretaria.segundo_nombre,
             'edad': secretaria.edad,
-            'sexo': secretaria.sexo, 
+            'sexo': secretaria.sexo,
             'rut': secretaria.rut,
             'fono': secretaria.fono,
             'ap_paterno': secretaria.ap_paterno,
@@ -534,7 +534,7 @@ def update_panel_secretaria(request, id_user):
         #
         user_sec = CustomersUsers.objects.get(pk=id_user)
         bd_username = user_sec.username
-        # Realizaremos 
+        # Realizaremos
         user_dato = {}
         #
         if password == "0" or bd_username == username:
@@ -570,7 +570,7 @@ def update_panel_secretaria(request, id_user):
                 'email': email,
                 'password': hashed_password,
             }
-        
+
         primer_nombre = data.get("primer_nombre")
         segundo_nombre = data.get("segundo_nombre")
         edad = data.get("edad")
@@ -585,9 +585,9 @@ def update_panel_secretaria(request, id_user):
         #
         user = CustomersUsers.objects.get(pk=id_user)
         serializer = CustomUserSerializer(user, data=user_dato, partial=True)
-        # 
+        #
         if serializer.is_valid():
-            # 
+            #
             id_user = serializer.save()
             secretaria = SecretariaModel.objects.get(fk_user=id_user)
             # Creamos el array de objetos.
@@ -602,43 +602,30 @@ def update_panel_secretaria(request, id_user):
                 'ap_materno': ap_materno,
             }
             sercretaria_serializers = SecretariaSerializer(secretaria, data=secre_dato, partial=True)
+            datos = []
             if sercretaria_serializers.is_valid():
                 sercretaria_serializers.save()
-                # Obtener el grupo por nombre
-                grupo = Group.objects.get(name='Secretaria')
-                #print(grupo)
-                # Obtener todos los usuarios del grupo
-                usuarios = grupo.user_set.all()
-                print("*************")
-                print(usuarios)
-                print("*************")
-                datos = []
-                print("Casi Entramos")
-                for users in usuarios:
-                    print("Entramos")
-                    print(users.id)
-                    serializer_secretaria = SecretariaModel.objects.filter(fk_user=users.id)
-                    for ser in serializer_secretaria:
-                        print(ser.primer_nombre)
-                        datos.append({
-                                'id_user': users.id,
-                                'username': users.username,
-                                'primer_nombre': ser.primer_nombre,
-                                'segundo_nombre': ser.segundo_nombre,
-                                'ap_paterno': ser.ap_paterno,
-                                'ap_materno': ser.ap_materno,
-                                'email': users.email,
-                                'edad': ser.edad,
-                                'sexo': ser.sexo,
-                                'rut': ser.rut,
-                                'fono': ser.fono,
-                                'secretaria_uuid': ser.secretaria_uuid,
-                            })
+                secretaria_model = SecretariaModel.objects.get(fk_user=id_user)
+                datos.append({
+                        'id_user': user.id,
+                        'username': user.username,
+                        'primer_nombre': secretaria_model.primer_nombre,
+                        'segundo_nombre': secretaria_model.segundo_nombre,
+                        'ap_paterno': secretaria_model.ap_paterno,
+                        'ap_materno': secretaria_model.ap_materno,
+                        'email': user.email,
+                        'edad': secretaria_model.edad,
+                        'sexo': secretaria_model.sexo,
+                        'rut': secretaria_model.rut,
+                        'fono': secretaria_model.fono,
+                        'secretaria_uuid': secretaria_model.secretaria_uuid,
+                    })
                 print(datos)
+                print("Prueba: ", datos)
                 #
                 if cerrar_session == 1:
                     # Eliminar el token actual del usuario
-                    Token.objects.filter(pk=users.id).delete()
+                    Token.objects.filter(pk=user.id).delete()
                     # Cerrar sesión en el request
                     logout(request)
                     logout_required = True
@@ -653,11 +640,11 @@ def update_panel_secretaria(request, id_user):
                                 # Específicamos el status.
                                 status=status.HTTP_200_OK)
                 print("---------------------///****//")
-                
+
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
-    
+
 #
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -695,7 +682,7 @@ def listar_secretarias_panel_secretaria(request):
                     })
         print(datos)
         print("---------------------///****//")
-        return Response({'secretarias':datos}, 
+        return Response({'secretarias':datos},
                         # Específicamos el status.
                         status=status.HTTP_200_OK)
     except Exception as err:

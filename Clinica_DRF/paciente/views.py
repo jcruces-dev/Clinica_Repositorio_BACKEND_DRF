@@ -55,39 +55,39 @@ from rest_framework.authtoken.models import Token
 #
 import os
 # Verificar si el usuario existe con este import, en caso de no, envía ERROR.
-from django.shortcuts import get_object_or_404 
-# En Django REST Framework (DRF), los decoradores authentication_classes y 
-# permission_classes se utilizan para configurar y aplicar las políticas de autenticación y 
+from django.shortcuts import get_object_or_404
+# En Django REST Framework (DRF), los decoradores authentication_classes y
+# permission_classes se utilizan para configurar y aplicar las políticas de autenticación y
 # permisos a las vistas de la API.
-# permission_classes; Este decorador se utiliza para especificar las clases de permisos que se 
-# deben usar para una vista específica. Los permisos determinan si un usuario tiene el derecho 
+# permission_classes; Este decorador se utiliza para especificar las clases de permisos que se
+# deben usar para una vista específica. Los permisos determinan si un usuario tiene el derecho
 # de realizar una acción específica en la API. Algunas de las clases de permisos comunes en DRF incluyen:
 # AllowAny: Permite acceso sin restricciones, tanto a usuarios autenticados como no autenticados.
 # IsAuthenticated: Permite acceso solo a usuarios autenticados.
 # IsAdminUser: Permite acceso solo a usuarios administradores (donde user.is_staff es True).
-# IsAuthenticatedOrReadOnly: Permite a los usuarios autenticados realizar cualquier solicitud, 
+# IsAuthenticatedOrReadOnly: Permite a los usuarios autenticados realizar cualquier solicitud,
 # y a los usuarios no autenticados solo realizar solicitudes de lectura (GET, HEAD, OPTIONS)
 from rest_framework.decorators import authentication_classes, permission_classes, api_view
 # La clase IsAuthenticated es un permiso en DRF que verifica si el usuario que realiza la solicitud está autenticado.
 # Cuando se establece IsAuthenticated como permiso para una vista, solo los usuarios autenticados podrán acceder a esa vista. Los usuarios no autenticados no tendrán permiso para realizar la solicitud
 from rest_framework.permissions import IsAuthenticated, AllowAny
 # Proceso de Autenticación
-# Obtención del Token: Cuando un usuario se autentica, intercambia su nombre de usuario y 
+# Obtención del Token: Cuando un usuario se autentica, intercambia su nombre de usuario y
 # contraseña por un token único. Este token se genera y almacena en la base de datos asociado al usuario.
-# Uso del Token: En solicitudes subsiguientes, el cliente debe incluir este token en el encabezado 
+# Uso del Token: En solicitudes subsiguientes, el cliente debe incluir este token en el encabezado
 # Authorization de la solicitud HTTP. El formato típico es Authorization: Token <token_value>
 from rest_framework.authentication import TokenAuthentication
-#from rest_framework.decorators import 
+#from rest_framework.decorators import
 from datetime import datetime, date
 # render_to_string; Sirve para enviar el HTML del correo.-------------------
-from django.template.loader import render_to_string 
+from django.template.loader import render_to_string
 # Mensaje del E-mail.
 from django.core.mail import EmailMessage
 #
 from django.conf import settings
 #----- Librería para crear PDF -------------------------------------------------
-import pdfkit 
-#----- Fin Librería para crear PDF --------------------------------------------- 
+import pdfkit
+#----- Fin Librería para crear PDF ---------------------------------------------
 
 # Create your views here.
 @api_view(['GET'])
@@ -355,6 +355,7 @@ def crear_paciente(request):
             if paciente.is_valid():
                 paciente_instancia = paciente.save()
                 # Enviamos los datos del paciente por correo; Nombre completo, rut, username, password.
+                print("*** Funcionando Correos Email ***")
                 correo_dato_inicial_pac_registrado(primer_nombre, segundo_nombre, ap_paterno, ap_materno, rut, username, password, email)
                 paciente_id = PacienteModel.objects.get(pk=paciente_instancia.id)
                 print(paciente_id)
@@ -449,7 +450,7 @@ def update_paciente(request, id):
         # Hacer una copia mutable de request.data
         # Esto se hace para poder agregar mas data al array de objetos.
         data = request.data.copy()
-        # 
+        #
         user = CustomersUsers.objects.get(pk=id)
         username = data.get("username")
         # Validamos si el Username existe en otro Usuario.
@@ -466,7 +467,7 @@ def update_paciente(request, id):
                 'email': email
             }
         if password != '0':
-            print("Pasamos 2") 
+            print("Pasamos 2")
             password = make_password(password)
             # Creamos el array de objetos para actualizar el usuario.
             dato_user = {
@@ -607,7 +608,7 @@ def reserva_paciente(request):
         id_clinica = request.data["id_clinica"]
         id_especialidad = request.data["id_especialidad"]
         id_usuario = request.data["id_usuario"]
-        
+
         #
         nombre_clinica = ComunaClinicaModel.objects.get(pk=id_clinica)
         print(nombre_clinica.nombre_clinica)
@@ -615,7 +616,7 @@ def reserva_paciente(request):
         especialidad = Especialidad.objects.get(pk=id_especialidad)
         print(especialidad.nombre_especialidad)
         arr.append({'especialidad': especialidad.nombre_especialidad, 'valor_especialidad': especialidad.valor_especialidad})
-        # 
+        #
         usuario = CustomersUsers.objects.get(pk=id_usuario)
         print(usuario.first_name)
         #
@@ -633,7 +634,7 @@ def reserva_paciente(request):
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
 
-# Reserva Paciente Registrado desde el Panel Secretaria. 
+# Reserva Paciente Registrado desde el Panel Secretaria.
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reserva_paciente_registrado(request):
@@ -645,7 +646,7 @@ def reserva_paciente_registrado(request):
         required_fields = ["id_clinica", "id_especialidad", "id_usuario_doctor", "id_usuario"]
         if any(data.get(field) in [None, '0'] for field in required_fields):
             return Response({'error': 0}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Obtener objetos relacionados
         nombre_clinica = ComunaClinicaModel.objects.get(pk=data["id_clinica"])
         especialidad = Especialidad.objects.get(pk=data["id_especialidad"])
@@ -657,7 +658,7 @@ def reserva_paciente_registrado(request):
             especialidad=especialidad.nombre_especialidad,
             nombre_clinica=nombre_clinica.nombre_clinica,
             nombre_doctor=nombre_completo_doctor,
-        ) 
+        )
         #
         nueva_data = []
         for reserv in reservas:
@@ -702,7 +703,7 @@ def crear_reserva_pac_registrado(request):
             usuario_creacion = PacienteModel.objects.get(fk_user=usuario)
             usuario_creacion_reserva = usuario_creacion.primer_nombre + " " + usuario_creacion.segundo_nombre + " " + usuario_creacion.ap_paterno + " " + usuario_creacion.ap_materno
             data['usuario_creacion_reserva'] = usuario_creacion_reserva
-        #    
+        #
         if 'Doctor' in grupos:
             usuario_creacion = DoctorModel.objects.get(fk_user=usuario)
             usuario_creacion_reserva = usuario_creacion.primer_nombre + " " + usuario_creacion.segundo_nombre + " " + usuario_creacion.ap_paterno + " " + usuario_creacion.ap_materno
@@ -762,7 +763,7 @@ def crear_reserva_pac_registrado(request):
             print(id_reserva_insertada)
             #
             # if metodo_pago == '1':
-            #     # 
+            #     #
             #     credito = str(uuid.uuid4())
             #     credito_uuid = credito
             #     monto_cuota = valor_especialidad / cant_cuotas
@@ -775,7 +776,7 @@ def crear_reserva_pac_registrado(request):
             #         'monto_cuotas' : monto_cuota,
             #         'fk_reserva_id': id_reserva_insertada
             #     })
-            # Realizamos el insert en la tabla relacionada de 
+            # Realizamos el insert en la tabla relacionada de
             reserva_user = ReservaModel.objects.filter(fk_usuario=request.data["fk_usuario"])
             print(reserva_user)
             # Obtenemos los datos del paciente.
@@ -805,7 +806,7 @@ def crear_reserva_pac_registrado(request):
             })
             # Envío del mensaje. Debemos pasar el template.
             emailSender = EmailMessage(
-                subject, 
+                subject,
                 template,
                 settings.EMAIL_HOST_USER,
                 ["matiasfamilycrew@gmail.com"],
@@ -930,7 +931,7 @@ def update_paciente_panel_secretaria(request, id):
         segundo_nombre = data.get("segundo_nombre")
         ap_paterno = data.get("ap_paterno")
         ap_materno = data.get("ap_materno")
-        
+
         edad = data.get("edad")
         rut = data.get("rut")
         validar = validar_rut.validar_rut(rut)
@@ -956,7 +957,7 @@ def update_paciente_panel_secretaria(request, id):
         dato_user = {
             'email': email
         }
-        # 
+        #
         user = CustomersUsers.objects.get(pk=id)
         # Validar y actualizar datos
         serializer = CustomUserSerializer(user, data=dato_user, partial=True)
@@ -1018,7 +1019,7 @@ def update_paciente_panel_secretaria(request, id):
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
-    
+
 #
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1079,7 +1080,7 @@ def update_pac_panel_pac(request, id_user):
         #
         user_sec = CustomersUsers.objects.get(pk=id_user)
         bd_username = user_sec.username
-        # Realizaremos 
+        # Realizaremos
         user_dato = {}
         #
         if password == "0" or bd_username == username:
@@ -1143,9 +1144,9 @@ def update_pac_panel_pac(request, id_user):
         #
         user = CustomersUsers.objects.get(pk=id_user)
         serializer = CustomUserSerializer(user, data=user_dato, partial=True)
-        # 
+        #
         if serializer.is_valid():
-            # 
+            #
             id_user = serializer.save()
             #
             paciente = PacienteModel.objects.get(fk_user=id_user)
@@ -1185,7 +1186,7 @@ def update_pac_panel_pac(request, id_user):
                         'edad': paciente.edad,
                         'sexo': paciente.sexo,
                         'rut': paciente.rut,
-                        'fono': paciente.fono,
+                        'contacto': paciente.fono,
                         'region': direccion.region,
                         'comuna': direccion.comuna,
                         'vivienda': direccion.vivienda,
@@ -1255,7 +1256,7 @@ def reserva_paciente_panel_paciente(request):
         #
         especialidad = Especialidad.objects.get(pk=id_especialidad)
         print(especialidad.nombre_especialidad)
-        # 
+        #
         usuario = CustomersUsers.objects.get(pk=id_usuario)
         #
         print(arr)
@@ -1272,13 +1273,13 @@ def reserva_paciente_panel_paciente(request):
             # Este array es para utilizarlo en FULL CALLENDAR.
             arr.append({
                 'fecha_reserva': reser.fecha_reserva,
-                'start': f"{reser.fecha_reserva}T{reser.hora_inicio}",  
+                'start': f"{reser.fecha_reserva}T{reser.hora_inicio}",
                 'end': f"{reser.fecha_reserva}T{reser.hora_termino}",
                 'title': reser.especialidad,
                 'nombre_doctor': reser.nombre_doctor,
                 'nombre_clinica': reser.nombre_clinica,
                 'comuna_clinica': reser.comuna_clinica,
-                'direccion_clinica': reser.direccion_clinica, 
+                'direccion_clinica': reser.direccion_clinica,
             })
         #
         return Response({'pacientes':arr},
@@ -1309,7 +1310,7 @@ def crear_reserva_panel_pac(request):
             usuario_creacion = PacienteModel.objects.get(fk_user=usuario)
             usuario_creacion_reserva = usuario_creacion.primer_nombre + " " + usuario_creacion.segundo_nombre + " " + usuario_creacion.ap_paterno + " " + usuario_creacion.ap_materno
             data['usuario_creacion_reserva'] = usuario_creacion_reserva
-        #    
+        #
         if 'Doctor' in grupos:
             usuario_creacion = DoctorModel.objects.get(fk_user=usuario)
             usuario_creacion_reserva = usuario_creacion.primer_nombre + " " + usuario_creacion.segundo_nombre + " " + usuario_creacion.ap_paterno + " " + usuario_creacion.ap_materno
@@ -1324,7 +1325,7 @@ def crear_reserva_panel_pac(request):
             # usuario_creacion = SecretariaModel.objects.get(fk_user=usuario)
             usuario_creacion_reserva = 'Administrador'
             data['usuario_creacion_reserva'] = usuario_creacion_reserva
-        
+
         fecha = data.get("fecha_reserva")
         #
         fecha_formateada = fecha.split("T")[0]  # Esto nos dará "2025-04-10"
@@ -1385,7 +1386,7 @@ def crear_reserva_panel_pac(request):
                     #
                     if hoy <= fecha_termino:
                         # Para aplicar el descuento, concatenamos antes un número 0.
-                        
+
                         descuento_aplicado = int((valor_especialidad * descuento) / 100)
                         # Aplicamos las cuotas sobre el valor total con descuento incluido.
                         descuento_real = int(valor_especialidad - descuento_aplicado)
@@ -1397,8 +1398,8 @@ def crear_reserva_panel_pac(request):
                         porcentaje_desc = verificar_cod.descuento
                         verificar_pac_cod = DescuentoPaciente.objects.filter(fk_paciente=paciente.id, fk_descuento=verificar_cod.id)
                         #
-                        if not verificar_pac_cod.exists():  
-                            # 
+                        if not verificar_pac_cod.exists():
+                            #
                             pac_desc = {
                                 'total_pagar': valor_especialidad,
                                 'total_pagar_descuento': descuento_real,
@@ -1413,7 +1414,7 @@ def crear_reserva_panel_pac(request):
                                 valor_real_desc_credito = 1
                                 valor_desc_debito = 1
                                 print("Aplicamos descuento")
-                                
+
                         else:
                             descuento_real = valor_especialidad
             else:
@@ -1422,11 +1423,11 @@ def crear_reserva_panel_pac(request):
             id_reserva_insertada = res.instance.id
             #
             if metodo_pago == '1':
-                # 
+                #
                 credito = str(uuid.uuid4())
                 credito_uuid = credito
                 cant_cuotas = int(data['cuotas'])
-                monto_cuota = int(valor_especialidad / cant_cuotas)  
+                monto_cuota = int(valor_especialidad / cant_cuotas)
                 pago_credito = ({
                     'credito': metodo_pago,
                     'fecha_pago': hoy,
@@ -1451,7 +1452,7 @@ def crear_reserva_panel_pac(request):
                     # Realizamos el descuento a la cantidad de cuotas si aplica.
                     if valor_real_desc_credito == 1:
                         valor_descuento_monto = int(descuento_real / cant_cuotas)
-                        res_nombre_paciente = pac.primer_nombre + ' ' + pac.segundo_nombre + ' ' + pac.ap_paterno + ' ' + pac.ap_materno 
+                        res_nombre_paciente = pac.primer_nombre + ' ' + pac.segundo_nombre + ' ' + pac.ap_paterno + ' ' + pac.ap_materno
                         # Crearemos el envío de correos CON DESCUENTO.
                         template = render_to_string("pacientes/correo_reserva.html",{
                             'nombre_paciente': res_nombre_paciente,
@@ -1482,9 +1483,9 @@ def crear_reserva_panel_pac(request):
                             'monto_cuotas' : valor_descuento_monto,
                         })
                     else:
-                        res_nombre_paciente = pac.primer_nombre + ' ' + pac.segundo_nombre + ' ' + pac.ap_paterno + ' ' + pac.ap_materno 
+                        res_nombre_paciente = pac.primer_nombre + ' ' + pac.segundo_nombre + ' ' + pac.ap_paterno + ' ' + pac.ap_materno
                         # Crearemos el envío de correos SIN DESCUENTO.
-                        template = render_to_string("pacientes/correo_reserva.html",{ 
+                        template = render_to_string("pacientes/correo_reserva.html",{
                                 'nombre_paciente': res_nombre_paciente,
                                 'rut_paciente': pac.rut,
                                 'email_paciente': id_user_pac.email,
@@ -1514,7 +1515,7 @@ def crear_reserva_panel_pac(request):
                             })
                     #
                     emailSender = EmailMessage(
-                        subject, 
+                        subject,
                         template,
                         settings.EMAIL_HOST_USER,
                         ["matiasfamilycrew@gmail.com"],
@@ -1534,7 +1535,7 @@ def crear_reserva_panel_pac(request):
                             # Específicamos el status.
                             status=status.HTTP_200_OK)
             if metodo_pago == '0':
-                # 
+                #
                 debitos = str(uuid.uuid4())
                 debito_uuid = debitos
                 pago_debito = ({
@@ -1611,9 +1612,9 @@ def crear_reserva_panel_pac(request):
                             'descuento': 'No Aplica',
                             'total_pagar': valor_especialidad,
                         })
-                    #    
+                    #
                     emailSender = EmailMessage(
-                        subject, 
+                        subject,
                         template,
                         settings.EMAIL_HOST_USER,
                         ["matiasfamilycrew@gmail.com"],
@@ -1631,7 +1632,7 @@ def crear_reserva_panel_pac(request):
                     #
                     return Response({'pacientes':todas_reservas_data.data},
                             # Específicamos el status.
-                            status=status.HTTP_200_OK)            
+                            status=status.HTTP_200_OK)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
@@ -1718,7 +1719,7 @@ def crear_reserva_panel_admin(request):
             todas_reservas = ReservaModel.objects.all()
             todas_reservas_data = ReservaSerializer(todas_reservas, many=True)
             #
-            return Response({'pacientes':todas_reservas_data.data}, 
+            return Response({'pacientes':todas_reservas_data.data},
                     # Específicamos el status.
                     status=status.HTTP_200_OK)
     except Exception as err:
@@ -1825,7 +1826,7 @@ def esp_panel_pac_registrado(request):
 
 # Correo de Reserva de hora por el ADMIN y Secretaria.
 def correo_reserva_cita(dato_cita):
-    try: 
+    try:
         print("Ingresamos al Correo.....")
         # Creación del correo.
         subject = "Correo de Verificación de Reseva Cita"
@@ -1851,7 +1852,7 @@ def correo_reserva_cita(dato_cita):
             # Enviamos el correo.
             pdf_reserva(template, nombre_paciente,emailSender)
             emailSender.send()
-            
+
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
@@ -1877,7 +1878,7 @@ def pdf_reserva(template, nombre_paciente, emailSender):
         # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
         # options = {'enable-local-file-access': None}
         # # Generar el PDF
-        # # template; Pertenece 
+        # # template; Pertenece
         # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}", configuration=config, options=options)
         # #Envío del mensaje. Debemos pasar el template.
         # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}")
@@ -1897,7 +1898,7 @@ def pdf_reserva(template, nombre_paciente, emailSender):
         # Limpiamos el nombre para evitar caracteres extraños en rutas Linux
         nombre_limpio = nombre_paciente.replace(" ", "_")
         filename = f"Boleta_{nombre_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
-        
+
         # 3. Ruta completa final (Dinámica)
         ruta_completa_pdf = os.path.join(carpeta_destino, filename)
 
@@ -1918,7 +1919,7 @@ def pdf_reserva(template, nombre_paciente, emailSender):
 
         # 6. Envío del mensaje adjuntando el archivo generado
         emailSender.attach_file(ruta_completa_pdf)
-        
+
         print(f"PDF generado y adjuntado correctamente: {filename}")
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
@@ -1944,7 +1945,7 @@ def pdf_panel_paciente(template, nombre_paciente, emailSender):
         # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
         # options = {'enable-local-file-access': None}
         # # Generar el PDF
-        # # template; Pertenece 
+        # # template; Pertenece
         # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}", configuration=config, options=options)
         ##Este pedazo de codigo sirve para cambiar las rutas / windows a Linux/.
         # En PythonAnywhere no necesitas la ruta al .exe de Windows
@@ -1956,13 +1957,13 @@ def pdf_panel_paciente(template, nombre_paciente, emailSender):
             config = pdfkit.configuration() # Por defecto busca en /usr/bin/wkhtmltopdf
 
         options = {'enable-local-file-access': None}
-        
+
         # 3. Ruta completa del archivo PDF
         ruta_completa_pdf = os.path.join(carpeta_destino, filename)
-        
+
         # Generar el PDF
         pdfkit.from_string(template, ruta_completa_pdf, configuration=config, options=options)
-        
+
         # Envío del mensaje
         emailSender.attach_file(ruta_completa_pdf)
         ##########################################################################
@@ -1971,7 +1972,7 @@ def pdf_panel_paciente(template, nombre_paciente, emailSender):
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
-    
+
 
 # Crear Paciente Panel ADMIN.
 def correo_dato_inicial_pac_registrado(primer_nombre, segundo_nombre, ap_paterno, ap_materno, rut, username, password, email):
@@ -1991,10 +1992,10 @@ def correo_dato_inicial_pac_registrado(primer_nombre, segundo_nombre, ap_paterno
         # Creación del correo.
         subject = "Correo Dato Login Paciente Registrado"
         nombre_paciente = f"{primer_nombre}_{ap_paterno}"
-        
+
         # 1. Definimos la carpeta de destino usando BASE_DIR (Universal para Windows/Linux)
         carpeta_destino = os.path.join(settings.BASE_DIR, 'BOLETA_PDF_PACIENTES')
-        
+
         if not os.path.exists(carpeta_destino):
             os.makedirs(carpeta_destino)
             print(f"Carpeta creada: {carpeta_destino}")
@@ -2009,7 +2010,7 @@ def correo_dato_inicial_pac_registrado(primer_nombre, segundo_nombre, ap_paterno
             path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
         else: # Si es Linux (PythonAnywhere)
-            config = pdfkit.configuration() 
+            config = pdfkit.configuration()
 
         options = {'enable-local-file-access': None}
 
@@ -2027,13 +2028,13 @@ def correo_dato_inicial_pac_registrado(primer_nombre, segundo_nombre, ap_paterno
             settings.EMAIL_HOST_USER,
             ["matiasfamilycrew@gmail.com"], # O podrías usar la variable 'email'
         )
-        
+
         emailSender.content_subtype = "html"
         emailSender.fail_silently = False
-        
+
         # Adjuntamos usando la ruta dinámica
         emailSender.attach_file(ruta_completa_pdf)
-        
+
         emailSender.send()
         print("Correo enviado exitosamente.")
         return Response({'pacientes':1},

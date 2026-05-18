@@ -24,5 +24,5 @@ urlpatterns = [
     # Obtener la especial
     # Reserva de cita desde el panel ADMIN.
     path('paciente/crear_reserva_panel_admin', views.crear_reserva_panel_admin, name='crear_reserva_panel_admin'),
-    path('paciente/crear_reserva_pac_registrado_secretaria', views.crear_reserva_pac_registrado_secretaria, name='crear_reserva_pac_registrado_secretaria'),
+    path('paciente/crear_reserva_pac_registrado_secretaria/', views.crear_reserva_pac_registrado_secretaria, name='crear_reserva_pac_registrado_secretaria'),
 ]
