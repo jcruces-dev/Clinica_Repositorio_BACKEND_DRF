@@ -36,10 +36,12 @@ urlpatterns = [
     path('reserva/update_pago_debito_reserva/<str:reserva_uuid>/', views.update_pago_debito_reserva, name='update_pago_debito_reserva'),
     #
     path('reserva/update_pago_credito_reserva/<str:reserva_uuid>/', views.update_pago_credito_reserva, name='update_pago_credito_reserva'),
-    # Esta ruta es del pago con débito de la reserva en el Index.
-    path('reserva/pago_debito_reserva_index', views.pago_debito_reserva_index, name='pago_debito_reserva_index'),
+    ##############################################################################################################################
+    # Estas rutas son solo del pago con STRIPE.
+    path('reserva/pago_stripe_reserva_index/', views.pago_stripe_reserva_index, name='pago_stripe_reserva_index'),
     # Esta ruta es del pago con CRÉDITO de la reserva en el Index.
-    path('reserva/pago_credito_reserva_index', views.pago_credito_reserva_index, name='pago_credito_reserva_index'),
+    # Este es el WEBHOOKS, cuando el pago ha finalizado con éxito.
+    path('reserva/confirmar_pago_stripe_exitoso/', views.confirmar_pago_stripe_exitoso, name='confirmar_pago_stripe_exitoso'),
     ##############################################################################################################################
     # Ruta de solo pago Debito de la reserva en el pago_reserva.html.
     path('reserva/pago_debito_solo_reserva', views.pago_debito_solo_reserva, name='pago_debito_solo_reserva'),

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 import environ
+import stripe
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -183,3 +184,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+# Llamamos la llave SECRETA de STRIPE.
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
+# 🌟 LA LÍNEA MAESTRA: Esto inicializa Stripe de forma global en tu proyecto
+stripe.api_key = STRIPE_SECRET_KEY

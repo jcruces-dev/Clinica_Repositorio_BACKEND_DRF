@@ -54,8 +54,9 @@ import pdfkit
 #----- Fin Librería para crear PDF ---------------------------------------------
 #
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
-
-
+# Librería STRIPE.
+import stripe
+# Fin STRIPE.
 
 # Create your views here.
 @api_view(['GET'])
@@ -240,8 +241,9 @@ def reserva_paciente_index(request):
 #
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def pago_debito_reserva_index(request):
+def pago_stripe_reserva_index(request):
     try:
+        print("INGRESAMOS AL PAGO.")
         data = request.data.copy()
         print(data)
         primer_nombre = data.get("primer_nombre")
@@ -295,6 +297,28 @@ def pago_debito_reserva_index(request):
         veri_res = ReservaModel.objects.filter(fecha_reserva= fecha_reserva_formateada, hora_inicio= hora_inicio,nombre_doctor=nombre_doctor, especialidad=especialidad, nombre_clinica=nombre_clinica)
         if veri_res.exists():
             return Response({'error': 8}, status=status.HTTP_400_BAD_REQUEST)
+        #----------------------------------------------------------------------------------
+        # 5. OBTENER EL MONTO DE LA ESPECIALIDAD
+        # Stripe recibe montos enteros. Para CLP (Pesos Chilenos) no se usan decimales.
+        monto_pago = int(valor_esp.valor_especialidad)
+        # 6. CREAR EL INTENTO DE PAGO EN STRIPE
+        # Enviamos los datos a Stripe e insertamos metadata para no perder el rastro de la reserva
+        print("Intento de Pago STRIPE.")
+        intento_pago = stripe.PaymentIntent.create(
+            amount=monto_pago,
+            currency='clp',
+            payment_method_types=['card'],  # Acepta tarjetas de débito y crédito
+            metadata={
+                'proyecto': 'BuenPaciente',
+                'rut_paciente': rut,
+                'email_paciente': email,
+                'doctor': nombre_doctor,
+                'especialidad': especialidad,
+                'fecha_reserva': fecha_reserva_formateada,
+                'hora_inicio': hora_inicio
+            }
+        )
+        #----------------------------------------------------------------------------------
         # Datos para el Full Calendar.
         full_calendar = []
         # Crear el paciente no registrado usando el serializer
@@ -323,41 +347,113 @@ def pago_debito_reserva_index(request):
                 'hora_termino':hora_termino,
                 'especialidad':especialidad,
                 'nombre_doctor':nombre_doctor,
-                'tipo_pago':0,
+                'tipo_pago': None,
                 'reserva_uuid': reserva_uuid,
                 'nombre_clinica':nombre_clinica,
                 'direccion_clinica':direccion_clinica,
                 'comuna_clinica':comuna_clinica,
-                'pago_realizado': 1,
+                'pago_realizado': None,
                 'fk_pac_no_register':pac_no_register.id,
             }
             #
             reserva = ReservaSerializer(data=arr)
+            print("Pago Aceptado por STRIPE.")
             if reserva.is_valid():
                 res = reserva.save()
-                deb = {
-                    'debito': 0,
-                    'fecha_pago': fecha_actual_chile.strftime('%Y-%m-%d %H:%M:%S.%f'),
-                    'debito_uuid': str(uuid.uuid4()),
-                    'monto': valor_esp.valor_especialidad,
-                    'monto_total': valor_esp.valor_especialidad,
-                    'fk_reserva': res.id,
-                }
-                #
-                pago_debito = DebitoSerializer(data=deb)
-                if pago_debito.is_valid():
-                    pago_debito.save()
-                    generar_correo_reserv_index(reserva_uuid, "0")
-                    return Response({'reserva':reserva.data, 'debito':pago_debito.data},
+                return Response({'reserva_uuid': reserva_uuid,'clientSecret': intento_pago.client_secret},
                                     # Específicamos el status.
                                     status=status.HTTP_200_OK)
-                else:
-                    print(pago_debito.errors)
+
         else:
             print(pac_no_register_serializers.errors)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
         return Response({'error': 1}, status=400)
+
+
+# Respuesta exitosa luego del pago, aca obtenemos la información del tipo de tarjeta y si trae cuotas.
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def confirmar_pago_stripe_exitoso(request):
+    try:
+        print("Pago Realizado ÉXITOSO")
+        print(request.data)
+        reserva_uuid = request.data.get("reserva_uuid")
+        stripe_payment_id = request.data.get("stripe_payment_id")
+        print("Pago Realizado 2")
+        # Le pedimos a Stripe que expanda el objeto 'payment_method'.
+        pago_stripe_obj = stripe.PaymentIntent.retrieve(
+            # Pasamos el id de la transacción para obtener la información a detalle.
+            stripe_payment_id,
+            # Esto obliga a traer los detalles de la tarjeta en la raíz.
+            expand=['payment_method']  
+        )
+        # Obtenemos el listado y lo pasamos a diccionario.
+        pago_stripe = pago_stripe_obj.to_dict()
+
+        # NUEVA RUTA DE LECTURA (Limpia y directa gracias al expand)
+        # Al expandir 'payment_method', los datos de la tarjeta quedan disponibles directamente ahí.
+        metodo_pago_objeto = pago_stripe.get('payment_method', {}) or {}
+        print("Pago Realizado 3")
+        # Si por alguna razón se guardó en el historial clásico, dejamos tu validador de respaldo
+        if isinstance(metodo_pago_objeto, dict) and 'card' in metodo_pago_objeto:
+            tarjeta_info = metodo_pago_objeto.get('card', {}) or {}
+
+        # Si no se encontró, buscar en la raíz de 'payment_method_details'
+        if not tarjeta_info or tarjeta_info.get('funding', 'unknown') == 'unknown':
+            detalles_pago = pago_stripe.get('payment_method_details', {}) or {}
+            tarjeta_info = detalles_pago.get('card', {}) or {}
+
+        # (La más segura para modo Test): Buscar directo en el historial de cargos ('charges')
+        # En entornos de prueba, Stripe suele poblar el objeto del cargo con el desglose de la tarjeta usada
+        if not tarjeta_info or tarjeta_info.get('funding', 'unknown') == 'unknown':
+            cargos = pago_stripe.get('charges', {}).get('data', []) or []
+            if cargos:
+                # Primero intentamos obtenerlo de los detalles del método de pago del cargo
+                detalles_cargo = cargos[0].get('payment_method_details', {}) or {}
+                tarjeta_info = detalles_cargo.get('card', {}) or {}
+                
+                # Si sigue sin estar, buscamos la propiedad 'card' directa en el objeto del cargo (si existiera)
+                if not tarjeta_info or tarjeta_info.get('funding', 'unknown') == 'unknown':
+                    tarjeta_info = cargos[0].get('card', {}) or {}
+
+        # Una vez localizada la tarjeta por cualquiera de las 3 rutas, extraemos los datos
+        if tarjeta_info:
+            installments_info = tarjeta_info.get('installments', {}) or {}
+            tipo_tarjeta = tarjeta_info.get('funding', 'unknown')
+        else:
+            tipo_tarjeta = 'unknown'
+
+        # Obtenemos las cuotas reales (si no hay, por defecto es 1)
+        cuotas = installments_info.get('count', 1) if isinstance(installments_info, dict) else 1
+        
+        #  Debe aparecer 'credit' o 'debit'
+        print(f"--> [DEBUG STRIPE FUNCIONANDO] Transacción Realizada con éxito.")
+
+        # Validación perfecta para la Base de Datos.
+        # 1 representa Crédito
+        # if tipo_tarjeta == 'credit':
+            
+        #     es_debito_o_credito = 1
+        #     glosa_pago = "Crédito"
+        #     print("Resultado: Crédito")
+        # else:
+            # 0 representa Débito
+            # es_debito_o_credito = 0
+            # glosa_pago = "Débito"
+            # print("Resultado: Débito")
+        # Buscamos la reserva que dejamos guardada como pendiente
+        reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+        # Ahora sí está pagada, ACTUALIZAMOS.
+        reserva.pago_realizado = 1 
+        reserva.save()
+        
+        # Enviamos el correo de confirmación
+        #generar_correo_reserv_index(reserva_uuid, "0")
+        
+        return Response({'status': 'ok', 'mensaje': 'Reserva confirmada con éxito'}, status=200)
+    except ReservaModel.DoesNotExist:
+        return Response({'error': 'Reserva no encontrada'}, status=404)
 
 # Pago reserva desde el index solo DÉBITO, paciente registrado y no registrado.
 @api_view(['POST'])
