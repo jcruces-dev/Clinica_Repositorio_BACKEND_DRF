@@ -15,7 +15,7 @@ import uuid
 # Validador de rut.
 from doctor import validar_rut
 #
-from django.contrib.auth.hashers import make_password  # ¡Añade esta importación!
+from django.contrib.auth.hashers import make_password
 # El token de DRF.
 from rest_framework.authtoken.models import Token
 # Cerrar la session del usuario actual.

@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from paciente_no_registrado.models import PacienteNoRegisterModel
 # Create your models here.
 class ReservaModel(models.Model):
-    fecha_creacion_reserva = models.DateTimeField(default=now)
+    fecha_creacion_reserva = models.DateTimeField(null=True, default=now)
     usuario_creacion_reserva = models.CharField(null=True, max_length=250)
     fecha_reserva = models.DateField(null=True, blank=True)
     hora_inicio = models.TimeField(null=True, blank=True)
