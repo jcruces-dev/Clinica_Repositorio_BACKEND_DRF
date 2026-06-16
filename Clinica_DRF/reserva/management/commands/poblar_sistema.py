@@ -491,9 +491,6 @@ class Command(BaseCommand):
     def insertar_usuario_paciente(self):
         try:
             self.stdout.write(self.style.SUCCESS("  ✅ Método para insertar a Usuarios Pacientes."))
-            # 1. Eliminamos los registros previos de forma segura
-            # PacienteModel.objects.all().delete()
-            # CustomersUsers.objects.filter(is_superuser=False).delete()
             
             # Obtenemos el GRUPO creado anteriormente, en este caso PACIENTE.
             grupo_paciente = Group.objects.get(name='Paciente')
@@ -504,9 +501,12 @@ class Command(BaseCommand):
             lista_usuarios_data = []
             lista_paciente_data = []
             lista_direccion_data = []
-            
-            # Creamos del 1 al 41 que es la cantidad de DOCTORES a poblar.
-            for i in range(1, 101):
+            # Hasheamos las pass antes del for si no, se demora en ejecutarse el script mas de 50 miutos. (OJO AHÍ).
+            password_hash = make_password("123")
+            # Usamos .values_list('username', flat=True) para traer solo strings, no objetos pesados.
+            usernames_existentes = set(CustomersUsers.objects.values_list('username', flat=True))
+            # Creamos del 1 al 3501 que es la cantidad de PACIENTES a poblar.
+            for i in range(1, 3501):
                 primer_nombre_paciente = generador_faker.first_name()
                 segundo_nombre_paciente = generador_faker.first_name()
                 ap_paterno_paciente = generador_faker.last_name()
@@ -515,26 +515,24 @@ class Command(BaseCommand):
                 sexo_paciente = generador_faker.random_element(elements=('M', 'F'))
                 telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
                 
-                # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
+                # Generamos datos de acceso únicos como el username y gmail a partir de los nombres y apellidos.
                 primer_nombre_corto = primer_nombre_paciente[:3].lower()
                 ap_paterno_corto = ap_paterno_paciente[:3].lower()
                 username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
                 email = f"{username_paciente}@gmail.com"
-                # Utilizamos una pass comun (solo prueba).
-                password = make_password("123")
                 # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
                 data_user = {
                     "username": username_paciente,
-                    "password": password,
+                    "password": password_hash,
                     "email": email,
                     "usuario_uuid": str(uuid.uuid4()),
                 }
-                # Debemos revisar que no se repitan los username.
-                if not CustomersUsers.objects.filter(username=username_paciente).exists():
-                    # Guardamos los datos en la lista.
+                # Aquí verificamos si NO está en el SET de Python y además cuidamos que no se duplique dentro del mismo ciclo
+                if username_paciente not in usernames_existentes:
                     lista_usuarios_data.append(data_user)
+                    usernames_existentes.add(username_paciente)
                     
-                # En este punto no le ponemos "fk_user_id" todavía porque no sabemos qué ID le dará la BD.
+                # Acá NO agregamos el "fk_user_id" todavía, porque no sabemos qué ID le dará la BD.
                 data_paciente = {
                     "primer_nombre": primer_nombre_paciente,
                     "segundo_nombre": segundo_nombre_paciente,
@@ -545,60 +543,35 @@ class Command(BaseCommand):
                     "fono": telefono_paciente,
                     "paciente_uuid": str(uuid.uuid4()),
                 }
+                print(data_paciente)
                 # Volvemos a agregar los datos a la lista.
                 lista_paciente_data.append(data_paciente)
-            # INSERCIÓN EN LA BASE DE DATOS.
-            # Creamos DataFrame con los datos de las listas.
-            df_usuarios = pd.DataFrame(lista_usuarios_data)
-            # Utilizamos esta abreviatiura para ahorra sintaxis.
-            # Convertimos la lista a diccionarios y luego lo utilizamos sus datos y las pasamos directamente a su 
-            # instancia.
-            # El **reg desempaqueta el diccionario y pasa sus claves como argumentos al modelo.
-            instancias_usuarios = [CustomersUsers(**reg) for reg in df_usuarios.to_dict('records')]
-            
-            # Bulk create de usuarios. 
-            # Django nos devuelve en 'usuarios_creados' la lista exacta con los IDs autoincrementales ya asignados.
-            usuarios_creados = CustomersUsers.objects.bulk_create(instancias_usuarios)
-            self.stdout.write(self.style.SUCCESS("  ✅ 101 Usuarios Pacientes fueron creado en la base creados."))
+            # INSERCIÓN EN LA BASE DE DATOS (USUARIOS).
+            # Convertimos los diccionarios a instancias del modelo ANTES del bulk_create.
+            instancias_usuarios = [CustomersUsers(**reg) for reg in lista_usuarios_data]
+            # Pasamos la instancia y colocamos batch_size=1000, para qu inserte por lotes de 1000 registros, 
+            # haciendo que la ejecucion se demore muchos menos.
+            usuarios_creados = CustomersUsers.objects.bulk_create(instancias_usuarios, batch_size=1000)
+            self.stdout.write(self.style.SUCCESS("  ✅ Usuarios Pacientes creados exitosamente."))
             
             # Asignación masiva al Grupo.
-            # CustomersUsers.groups.through
-            # CustomersUsers.groups es un campo ManyToMany hacia el modelo Group. 
-            # Realizamos el llamado a la tabla intermedia de DJANGO y 
-            # con through, le decimos que NOS las traiga
-            # Aquí la guardamos en la variable UserGroupThrough para poder crear instancias directamente.
             UserGroupThrough = CustomersUsers.groups.through
-            # Se recorre la lista usuarios_creados (los que insertaste con bulk_create).
-            # Para cada usuario, se crea una instancia de la tabla intermedia (UserGroupThrough) que relaciona:
-            # customersusers_id → el ID del usuario recién creado.
-            # group_id → el ID del grupo "Paciente".
-            # El resultado es una lista de relaciones que vinculan cada usuario con el grupo.
             relaciones_grupos = [
                 UserGroupThrough(customersusers_id=user.id, group_id=grupo_paciente.id)
                 for user in usuarios_creados
             ]
-            # Realizamos el bulk a nuestra tabla que viene por defecto en DRF.
             UserGroupThrough.objects.bulk_create(relaciones_grupos)
-            self.stdout.write(self.style.SUCCESS("  ✅ 101 Usuarios asignados al Grupo 'Paciente' exitosamente."))
-            # ASIGNACIÓN PARA EL PERFIL PACIENTE.
-            # Unimos cada perfil paciente con su respectivo ID de usuario usando zip() ya que ambas 
-            # listas mantienen el mismo orden.
+            self.stdout.write(self.style.SUCCESS("  ✅ Usuarios asignados al Grupo 'Paciente' exitosamente."))
+
+            # Asiganos a los pacientes creados al GRUPO PACIENTES.
             for idx, user in enumerate(usuarios_creados):
-                # Pasamos el ID al campo que faltaba anteriormente en doctores para la insercción.
                 lista_paciente_data[idx]["fk_user_id"] = user.id
-            # Ahora pasamos la lista definitiva por Pandas para instanciar los perfiles de los pacientes
-            # Pasamos la lista con los id generados arriba (for idx, user in enumerate(usuarios_creados):).
-            df_paciente = pd.DataFrame(lista_paciente_data)
-            # Convertimos la lista a diccionario e instanciamos su modelo.
-            instancias_paciente = [PacienteModel(**reg) for reg in df_paciente.to_dict('records')]
-            # Realizamos el insert.
-            # Acá obtenemos los id incertados de los pacientes.
-            paciente_creados = PacienteModel.objects.bulk_create(instancias_paciente)
-            # print(generador_faker.province())
-            # print(generador_faker.random_element(elements=('Casa', 'Departamento', 'Condominio')))
-            # print(str(generador_faker.random_int(min=1, max=9999)))
-            # Como faker generaba error por el tipo 'es_CL'; generador_faker = Faker('es_CL'). Tuve 
-            # que pasar las comunas del gran Santiago en una lista e utilizarla con el Random. 
+
+            # Convertimos los diccionarios a instancias de PacienteModel.
+            instancias_paciente = [PacienteModel(**reg) for reg in lista_paciente_data]
+            # Insertamos en la BD por lotes de 1000.
+            paciente_creados = PacienteModel.objects.bulk_create(instancias_paciente, batch_size=1000)
+            # Definimos las comunas por defecto.
             comunas_chile = [
                 "Cerrillos", "Cerro Navia", "Colina", "Conchalí", "El Bosque", 
                 "Estación Central", "Huechuraba", "Independencia", "La Cisterna", 
@@ -609,38 +582,26 @@ class Command(BaseCommand):
                 "Renca", "San Bernardo", "San Joaquín", "San Miguel", "San Ramón", 
                 "Santiago Centro", "Vitacura"
             ]
+
             try:
                 for paciente in paciente_creados:
-                    # 
-                    instancia_paciente = PacienteModel.objects.get(pk=paciente.id)
-                    #
                     data_direccion = {
                         "region": generador_faker.province(),
-                        # .choice: Recibe como argumento una secuencia (lista, tupla, string).
                         "comuna": random.choice(comunas_chile),
-                        # faker.random_element() → hace lo mismo que .choice, pero está integrado 
-                        # en el ecosistema de Faker, 
-                        # lo que me permite mantener consistencia con otros datos falsos de faker.
-                        # (nombres, direcciones, correos, etc.).
                         "vivienda": generador_faker.random_element(elements=('Casa', 'Departamento', 'Condominio')),
                         "num_vivienda": str(generador_faker.random_int(min=1, max=9999)),
-                        "fk_paciente_id": instancia_paciente.id,
+                        "fk_paciente_id": paciente.id,
                     }
-                    # Pasamos el ID al campo que faltaba anteriormente en doctores para la insercción.
                     lista_direccion_data.append(data_direccion)
-                    df_direccion = pd.DataFrame(lista_direccion_data)
-                    instancias_direccion = [DireccionModel(**reg) for reg in df_direccion.to_dict('records')]
             except Exception as e:
-                # Captura genérica: Cualquier otro error de Python (errores de tipeo, Pandas, listas, etc.)
-                self.stdout.write(self.style.ERROR(f"⚠️ Error inesperado en Python: {e}"))
+                self.stdout.write(self.style.ERROR(f"⚠️ Error inesperado en Python al armar direcciones: {e}"))
             
-            df_direccion = pd.DataFrame(lista_direccion_data)
-            # Convertimos la lista a diccionario e instanciamos su modelo.
-            instancias_direccion = [DireccionModel(**reg) for reg in df_direccion.to_dict('records')]
-            #
-            direcciones_creadas = DireccionModel.objects.bulk_create(instancias_direccion)
+            # Convertimos los diccionarios a instancias de DireccionModel
+            instancias_direccion = [DireccionModel(**reg) for reg in lista_direccion_data]
+            direcciones_creadas = DireccionModel.objects.bulk_create(instancias_direccion, batch_size=1000)
+            # Mostramos los mensajes en la consola de depuración.
             self.stdout.write(self.style.SUCCESS(f"  ✅ {len(direcciones_creadas)} Direcciones inyectadas correctamente."))
-            self.stdout.write(self.style.SUCCESS("  ✅ Relaciones Secretaria-Clínica inyectadas correctamente."))
+            self.stdout.write(self.style.SUCCESS("  ✅ Proceso de inyección de pacientes finalizado con éxito."))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"❌ Ocurrió un error inesperado: {e}"))
     
@@ -767,7 +728,7 @@ class Command(BaseCommand):
                 print("Ingresamos a la RESERVA.")
                 df_reservas = pd.DataFrame(listas_reservas)
                 instancias_reserva = [ReservaModel(**reg) for reg in df_reservas.to_dict('records')]
-                reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva)
+                reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva, batch_size=1000)
 
                 # Extraemos los UUIDs que acabamos de crear en este método
                 uuids_creados = [r['reserva_uuid'] for r in listas_reservas]
@@ -830,10 +791,10 @@ class Command(BaseCommand):
                 # Fuera del ciclo for.
                 df_credito = pd.DataFrame(lista_credito)
                 instancias_credito = [CreditoModel(**reg) for reg in df_credito.to_dict('records')]
-                credito_creadas = CreditoModel.objects.bulk_create(instancias_credito)
+                credito_creadas = CreditoModel.objects.bulk_create(instancias_credito, batch_size=1000)
                 df_debito = pd.DataFrame(lista_debito)
                 instancias_debito = [DebitoModel(**reg) for reg in df_debito.to_dict('records')]
-                debito_creadas = DebitoModel.objects.bulk_create(instancias_debito)    
+                debito_creadas = DebitoModel.objects.bulk_create(instancias_debito, batch_size=1000)    
                 #
                 self.stdout.write(self.style.SUCCESS(f"  ✅ Reservas pagadas con DÉBITO o CRÉDITO inyectadas con éxito."))
             else:
@@ -935,7 +896,7 @@ class Command(BaseCommand):
         df_historial = pd.DataFrame(historial_pac_registrado)
         instancias_historial = [HistorialClinicoModel(**reg) for reg in df_historial.to_dict('records')]
         # Realizamos el insert a la BD.
-        HistorialClinicoModel.objects.bulk_create(instancias_historial)
+        HistorialClinicoModel.objects.bulk_create(instancias_historial, batch_size=1000)
         self.stdout.write(self.style.SUCCESS("  ✅ HISTORIAL CLÍNICO DE PACIENTES REGISTRADOS inyectados con coherencia total."))
         
     # Método para insertar a PACIENTES NO REGISTRADOS.
@@ -949,7 +910,7 @@ class Command(BaseCommand):
         lista_paciente_data = []
         
         # Creamos del 1 al 41 que es la cantidad de DOCTORES a poblar.
-        for i in range(1, 101):
+        for i in range(1, 2501):
             primer_nombre_paciente = generador_faker.first_name()
             segundo_nombre_paciente = generador_faker.first_name()
             ap_paterno_paciente = generador_faker.last_name()
@@ -985,7 +946,7 @@ class Command(BaseCommand):
         instancias_paciente = [PacienteNoRegisterModel(**reg) for reg in df_pac_no_registrado.to_dict('records')]
         # Realizamos el insert.
         # Acá obtenemos los id incertados de los pacientes.
-        PacienteNoRegisterModel.objects.bulk_create(instancias_paciente)
+        PacienteNoRegisterModel.objects.bulk_create(instancias_paciente, batch_size=1000)
         self.stdout.write(self.style.SUCCESS("  ✅ PACIENTE NO REGISTRADO INSERTADOS CORRECTAMENTE"))
     
     # Método para insertar las reservas.
@@ -1107,7 +1068,7 @@ class Command(BaseCommand):
                 print("Ingresamos a la RESERVA DEL PACIENTE NO REGISTRADO.")
                 df_reservas = pd.DataFrame(listas_reservas)
                 instancias_reserva = [ReservaModel(**reg) for reg in df_reservas.to_dict('records')]
-                reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva)
+                reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva, batch_size=1000)
 
                 # Extraemos los UUIDs que acabamos de crear en este método para pacientes no registrados.
                 # Esta línea de código es una Comprensión de Listas (List Comprehension) en Python. 
@@ -1181,10 +1142,10 @@ class Command(BaseCommand):
                 # Fuera del ciclo for.
                 df_credito = pd.DataFrame(lista_credito)
                 instancias_credito = [CreditoModel(**reg) for reg in df_credito.to_dict('records')]
-                credito_creadas = CreditoModel.objects.bulk_create(instancias_credito)
+                credito_creadas = CreditoModel.objects.bulk_create(instancias_credito, batch_size=1000)
                 df_debito = pd.DataFrame(lista_debito)
                 instancias_debito = [DebitoModel(**reg) for reg in df_debito.to_dict('records')]
-                debito_creadas = DebitoModel.objects.bulk_create(instancias_debito)    
+                debito_creadas = DebitoModel.objects.bulk_create(instancias_debito, batch_size=1000)    
                 #
                 self.stdout.write(self.style.SUCCESS(f"  ✅ Reservas pagadas con DÉBITO o CRÉDITO inyectadas con éxito PACIENTE NO REGISTRADO."))
             else:
@@ -1287,5 +1248,5 @@ class Command(BaseCommand):
         print(df_historial)
         instancias_historial = [HistorialPacNoRegistradoModel(**reg) for reg in df_historial.to_dict('records')]
         # Realizamos el insert a la BD.
-        HistorialPacNoRegistradoModel.objects.bulk_create(instancias_historial)
+        HistorialPacNoRegistradoModel.objects.bulk_create(instancias_historial, batch_size=1000)
         self.stdout.write(self.style.SUCCESS("  ✅ HISTORIAL CLÍNICO DE PACIENTES NO REGISTRADOS inyectados con coherencia total."))
