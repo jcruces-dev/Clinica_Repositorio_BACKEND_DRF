@@ -75,11 +75,26 @@ class Command(BaseCommand):
         self.insertar_usuario_doctor()
         self.insertar_usuario_secretaria()
         self.insertar_usuario_paciente()
-        self.insertar_reserva_paciente_registrado()
+        # =========================================================================
+        # CONTROL DE AGENDAS GLOBAL UNIFICADO
+        # =========================================================================
+        horarios_globales = set()  # Se crea vacío aquí en el método padre
+
+        # El primer método llena el set con las horas ocupadas por registrados
+        self.insertar_reserva_paciente_registrado(horarios_ocupados=horarios_globales)
         self.insertar_historial_paciente_registrado()
+
         self.insertar_paciente_no_registrado()
-        self.insertar_reserva_paciente_no_registrado()
-        self.insertar_historial_paciente_no_registrado()
+
+        # El segundo método lee el set que YA TIENE horas guardadas y evita duplicarlas
+        self.insertar_reserva_paciente_no_registrado(horarios_ocupados=horarios_globales)
+        #self.insertar_historial_paciente_no_registrado()
+        # =========================================================================
+        #self.insertar_reserva_paciente_registrado()
+        #self.insertar_historial_paciente_registrado()
+        #self.insertar_paciente_no_registrado()
+        #self.insertar_reserva_paciente_no_registrado()
+        #self.insertar_historial_paciente_no_registrado()
         # -----------------------------------------------------------------
         #
         self.stdout.write(self.style.SUCCESS("¡Proceso finalizado con éxito!"))
@@ -105,32 +120,25 @@ class Command(BaseCommand):
     # Recordar que debe ir fuera del método HANDLE y lo ejecutamos adentro.
     def insertar_clinicas(self):
         # 1. Crear datos de ejemplo (un diccionario)
+        # 1. Crear datos de ejemplo (un diccionario)
         datos_clinica = {
             'nombre_clinica': ['Clínica BuenPaciente - Sede Providencia', 'Clínica BuenPaciente - Sede Las Condes', 'Clínica BuenPaciente - Sede Maipú', 'Clínica BuenPaciente - Sede Vitacura', 'Clínica BuenPaciente - Sede Santiago Centro'],
-            'comuna_clinica': ['Las Condes', 'Providencia', 'Maipú', 'Vitacura', 'Santiago Centro'],
-            'direccion_clinica': ['Av. Providencia #1234', 'Av. Pajaritos #5678', 'Av. Vitacura #5678', 'Esquina Álvarez con Roberto #456', 'Santiago Centro #5812']
+            
+            'comuna_clinica': [ 'Providencia', 'Las Condes','Maipú', 'Vitacura', 'Santiago Centro'],
+            
+            'direccion_clinica': ['Av. Providencia #1234', 'Esquina Álvarez con Roberto #456', 'Av. Pajaritos #5678', 'Av. Vitacura #5678','Santiago Centro #5812']
         }
-        
-        # 2. Convertirlo en un DataFrame de Pandas
-        df_clinica = pd.DataFrame(datos_clinica)
-        # Convertimos el DataFrame a Diccionario.
-        registros = df_clinica.to_dict('records')
-        # 4. Transformar los diccionarios en instancias del modelo real de Django.
-        # Esto por que al realizar el BULK con pandas, solo se recibe la Instancias de los Modelos a insertar.
-        # Transformamos los datos en argumentos nombrados directos para el modelo de Django.
-        # Este código, lo que hace es ahorrar el tiempo.
-        # ESTO HACE EXACTAMENTE LO MISMO, PERO EN 5 LÍNEAS MÁS LENTAS:
-        # objetos_clinica = []  # 1. Creas una lista vacía
-        # for reg in registros:  # 2. Recorres los diccionarios de Pandas
-        #     # 3. Traduces el diccionario a un modelo de Django
-        #     nuevo_objeto = ComunaClinicaModel(
-        #         nombre_clinica=reg['nombre_clinica'],
-        #         comuna_clinica=reg['comuna_clinica'],
-        #         direccion_clinica=reg['direccion_clinica']
-        #     )
-        #     # 4. Lo agregas a la lista
-        #     objetos_clinica.append(nuevo_objeto)
-        objetos_clinica = [ComunaClinicaModel(**reg) for reg in registros]
+        lista = []
+        for i in range(len(datos_clinica['nombre_clinica'])):
+            #
+            registro = {
+                "nombre_clinica": datos_clinica['nombre_clinica'][i],
+                "comuna_clinica": datos_clinica['comuna_clinica'][i],
+                "direccion_clinica": datos_clinica['direccion_clinica'][i]
+            }
+            #
+            lista.append(registro)
+        objetos_clinica = [ComunaClinicaModel(**reg) for reg in lista]
         # 5. Inserción masiva limpia a PostgreSQL/SQLite en UNA SOLA CONSULTA
         ComunaClinicaModel.objects.bulk_create(objetos_clinica)
         #
@@ -164,67 +172,104 @@ class Command(BaseCommand):
     # Este es el método para insertar usuarios Doctor.
     def insertar_usuario_doctor(self):
         # 1. Eliminamos los registros previos de forma segura
-        # DoctorModel.objects.all().delete()
-        # CustomersUsers.objects.filter(is_superuser=False).delete()
-        
         # Obtenemos el GRUPO creado anteriormente.
         grupo_doctor = Group.objects.get(name='Doctor')
         fake = Faker('es_CL')
-        
         # Inicializamos las listas.
         lista_usuarios_data = []
         lista_doctores_data = []
-        
+        # Utilizamos una pass comun (solo prueba).
+        password_hash = make_password("123")
         # Creamos del 1 al 41 que es la cantidad de DOCTORES a poblar.
         for i in range(1, 41):
-            primer_nombre_doctor = fake.first_name()
-            segundo_nombre_doctor = fake.first_name()
-            ap_paterno_doctor = fake.last_name()
-            ap_materno_doctor = fake.last_name()
+            #
+            sexo = random.choice(['M', 'F'])
             edad_doctor = fake.random_int(min=25, max=60)
-            sexo_doctor = fake.random_element(elements=('M', 'F'))
-            telefono_doctor = f"+56 9{fake.random_int(min=10000000, max=99999999)}"
-            
-            # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
-            primer_nombre_corto = primer_nombre_doctor[:3].lower()
-            ap_paterno_corto = ap_paterno_doctor[:3].lower()
-            username_doctor = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{fake.random_int(100,999)}"
-            email = f"{username_doctor}@gmail.com"
-            # Utilizamos una pass comun (solo prueba).
-            password = make_password("123")
-            # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
-            data_user = {
-                "username": username_doctor,
-                "password": password,
-                "email": email,
-                "usuario_uuid": str(uuid.uuid4()),
-            }
-            # Debemos revisar que no se repitam los username.
-            if not CustomersUsers.objects.filter(username=username_doctor).exists():
-                # Guardamos los datos en la lista.
-                lista_usuarios_data.append(data_user)
-            
-            # En este punto no le ponemos "fk_user_id" todavía porque no sabemos qué ID le dará la BD.
-            data_doctor = {
-                "primer_nombre": primer_nombre_doctor,
-                "segundo_nombre": segundo_nombre_doctor,
-                "ap_paterno": ap_paterno_doctor,
-                "ap_materno": ap_materno_doctor,
-                "edad": edad_doctor,
-                "sexo": sexo_doctor,
-                "fono": telefono_doctor,
-                "doctor_uuid": str(uuid.uuid4()),
-            }
-            # Volvemos a agregar los datos a la lista.
-            lista_doctores_data.append(data_doctor)
-    
+            #
+            if sexo == 'M':
+                primer_nombre_doctor = fake.first_name_male()
+                segundo_nombre_doctor = fake.first_name_male()
+                ap_paterno_doctor = fake.last_name()
+                ap_materno_doctor = fake.last_name()
+                telefono_doctor = f"+56 9{fake.random_int(min=10000000, max=99999999)}"
+                sexo_doctor = 'M'
+                # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
+                primer_nombre_corto = primer_nombre_doctor[:3].lower()
+                ap_paterno_corto = ap_paterno_doctor[:3].lower()
+                username_doctor = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{fake.random_int(100,999)}"
+                email = f"{username_doctor}@gmail.com"
+                # Utilizamos una pass comun (solo prueba).
+                password = password_hash
+                # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
+                data_user = {
+                    "username": username_doctor,
+                    "password": password,
+                    "email": email,
+                    "usuario_uuid": str(uuid.uuid4()),
+                }
+                # Debemos revisar que no se repitan los username.
+                if not CustomersUsers.objects.filter(username=username_doctor).exists():
+                    # Guardamos los datos en la lista.
+                    lista_usuarios_data.append(data_user)
+                
+                    # En este punto no le ponemos "fk_user_id" todavía porque no sabemos qué ID le dará la BD.
+                    data_doctor = {
+                        "primer_nombre": primer_nombre_doctor,
+                        "segundo_nombre": segundo_nombre_doctor,
+                        "ap_paterno": ap_paterno_doctor,
+                        "ap_materno": ap_materno_doctor,
+                        "edad": edad_doctor,
+                        "sexo": sexo_doctor,
+                        "fono": telefono_doctor,
+                        "doctor_uuid": str(uuid.uuid4()),
+                    }
+                    # Volvemos a agregar los datos a la lista.
+                    lista_doctores_data.append(data_doctor)
+            else:
+                primer_nombre_doctor = fake.first_name_female()
+                segundo_nombre_doctor = fake.first_name_female()
+                ap_paterno_doctor = fake.last_name()
+                ap_materno_doctor = fake.last_name()
+                telefono_doctor = f"+56 9{fake.random_int(min=10000000, max=99999999)}"
+                sexo_doctor = 'F'
+                # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
+                primer_nombre_corto = primer_nombre_doctor[:3].lower()
+                ap_paterno_corto = ap_paterno_doctor[:3].lower()
+                username_doctor = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{fake.random_int(100,999)}"
+                email = f"{username_doctor}@gmail.com"
+                # Utilizamos una pass comun (solo prueba).
+                password = password_hash
+                # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
+                data_user = {
+                    "username": username_doctor,
+                    "password": password,
+                    "email": email,
+                    "usuario_uuid": str(uuid.uuid4()),
+                }
+                # Debemos revisar que no se repitan los username.
+                if not CustomersUsers.objects.filter(username=username_doctor).exists():
+                    # Guardamos los datos en la lista.
+                    lista_usuarios_data.append(data_user)
+                
+                    # En este punto no le ponemos "fk_user_id" todavía porque no sabemos qué ID le dará la BD.
+                    data_doctor = {
+                        "primer_nombre": primer_nombre_doctor,
+                        "segundo_nombre": segundo_nombre_doctor,
+                        "ap_paterno": ap_paterno_doctor,
+                        "ap_materno": ap_materno_doctor,
+                        "edad": edad_doctor,
+                        "sexo": sexo_doctor,
+                        "fono": telefono_doctor,
+                        "doctor_uuid": str(uuid.uuid4()),
+                    }
+                    # Volvemos a agregar los datos a la lista.
+                    lista_doctores_data.append(data_doctor)
         # INSERCIÓN EN LA BASE DE DATOS.
         # Creamos DataFrame con los datos de las listas.
-        df_usuarios = pd.DataFrame(lista_usuarios_data)
+        #df_usuarios = pd.DataFrame(lista_usuarios_data)
         # Utilizamos esta abreviatiura para ahorra sintaxis.
         # Convertimos la lista a diccionarios y luego lo utilizamos sus datos y las pasamos directamente a su instancia.
-        instancias_usuarios = [CustomersUsers(**reg) for reg in df_usuarios.to_dict('records')]
-        
+        instancias_usuarios = [CustomersUsers(**reg) for reg in lista_usuarios_data]
         # Bulk create de usuarios. 
         # Django nos devuelve en 'usuarios_creados' la lista exacta con los IDs autoincrementales ya asignados.
         usuarios_creados = CustomersUsers.objects.bulk_create(instancias_usuarios)
@@ -249,9 +294,9 @@ class Command(BaseCommand):
 
         # Ahora pasamos la lista definitiva por Pandas para instanciar los perfiles médicos
         # Pasamosla lista con los idgenerados arriba (for idx, user in enumerate(usuarios_creados):).
-        df_doctores = pd.DataFrame(lista_doctores_data)
+        #df_doctores = pd.DataFrame(lista_doctores_data)
         # Convertimos la lista a diccionario e instanciamos su modelo.
-        instancias_doctores = [DoctorModel(**reg) for reg in df_doctores.to_dict('records')]
+        instancias_doctores = [DoctorModel(**reg) for reg in lista_doctores_data]
         # Realizamos el insert.
         doctores_creados = DoctorModel.objects.bulk_create(instancias_doctores)
         self.stdout.write(self.style.SUCCESS("  ✅ 40 Perfiles de Doctores creados en la base de datos."))
@@ -507,45 +552,83 @@ class Command(BaseCommand):
             usernames_existentes = set(CustomersUsers.objects.values_list('username', flat=True))
             # Creamos del 1 al 3501 que es la cantidad de PACIENTES a poblar.
             for i in range(1, 3501):
-                primer_nombre_paciente = generador_faker.first_name()
-                segundo_nombre_paciente = generador_faker.first_name()
-                ap_paterno_paciente = generador_faker.last_name()
-                ap_materno_paciente = generador_faker.last_name()
-                edad_paciente = generador_faker.random_int(min=0, max=100)
-                sexo_paciente = generador_faker.random_element(elements=('M', 'F'))
-                telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
-                
-                # Generamos datos de acceso únicos como el username y gmail a partir de los nombres y apellidos.
-                primer_nombre_corto = primer_nombre_paciente[:3].lower()
-                ap_paterno_corto = ap_paterno_paciente[:3].lower()
-                username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
-                email = f"{username_paciente}@gmail.com"
-                # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
-                data_user = {
-                    "username": username_paciente,
-                    "password": password_hash,
-                    "email": email,
-                    "usuario_uuid": str(uuid.uuid4()),
-                }
-                # Aquí verificamos si NO está en el SET de Python y además cuidamos que no se duplique dentro del mismo ciclo
-                if username_paciente not in usernames_existentes:
-                    lista_usuarios_data.append(data_user)
-                    usernames_existentes.add(username_paciente)
-                    
-                # Acá NO agregamos el "fk_user_id" todavía, porque no sabemos qué ID le dará la BD.
-                data_paciente = {
-                    "primer_nombre": primer_nombre_paciente,
-                    "segundo_nombre": segundo_nombre_paciente,
-                    "ap_paterno": ap_paterno_paciente,
-                    "ap_materno": ap_materno_paciente,
-                    "edad": edad_paciente,
-                    "sexo": sexo_paciente,
-                    "fono": telefono_paciente,
-                    "paciente_uuid": str(uuid.uuid4()),
-                }
-                print(data_paciente)
-                # Volvemos a agregar los datos a la lista.
-                lista_paciente_data.append(data_paciente)
+                sexo = random.choice(['M', 'F'])
+                if sexo == 'M':
+                    primer_nombre_paciente = generador_faker.first_name_male()
+                    segundo_nombre_paciente = generador_faker.first_name_male()
+                    ap_paterno_paciente = generador_faker.last_name()
+                    ap_materno_paciente = generador_faker.last_name()
+                    edad_paciente = generador_faker.random_int(min=0, max=95)
+                    sexo_paciente = 'M'
+                    telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
+                    # Generamos datos de acceso únicos como el username y gmail a partir de los nombres y apellidos.
+                    primer_nombre_corto = primer_nombre_paciente[:3].lower()
+                    ap_paterno_corto = ap_paterno_paciente[:3].lower()
+                    username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
+                    email = f"{username_paciente}@gmail.com"
+                    # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
+                    data_user = {
+                        "username": username_paciente,
+                        "password": password_hash,
+                        "email": email,
+                        "usuario_uuid": str(uuid.uuid4()),
+                    }
+                    # Aquí verificamos si NO está en el SET de Python y además cuidamos que no se duplique dentro del mismo ciclo
+                    if username_paciente not in usernames_existentes:
+                        lista_usuarios_data.append(data_user)
+                        usernames_existentes.add(username_paciente)
+                        
+                        # Acá NO agregamos el "fk_user_id" todavía, porque no sabemos qué ID le dará la BD.
+                        data_paciente = {
+                            "primer_nombre": primer_nombre_paciente,
+                            "segundo_nombre": segundo_nombre_paciente,
+                            "ap_paterno": ap_paterno_paciente,
+                            "ap_materno": ap_materno_paciente,
+                            "edad": edad_paciente,
+                            "sexo": sexo_paciente,
+                            "fono": telefono_paciente,
+                            "paciente_uuid": str(uuid.uuid4()),
+                        }
+                        # Volvemos a agregar los datos a la lista.
+                        lista_paciente_data.append(data_paciente)
+                else:
+                    primer_nombre_paciente = generador_faker.first_name_female()
+                    segundo_nombre_paciente = generador_faker.first_name_female()
+                    ap_paterno_paciente = generador_faker.last_name()
+                    ap_materno_paciente = generador_faker.last_name()
+                    edad_paciente = generador_faker.random_int(min=0, max=100)
+                    sexo_paciente = 'F'
+                    telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
+                    # Generamos datos de acceso únicos como el username y gmail a partir de los nombres y apellidos.
+                    primer_nombre_corto = primer_nombre_paciente[:3].lower()
+                    ap_paterno_corto = ap_paterno_paciente[:3].lower()
+                    username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
+                    email = f"{username_paciente}@gmail.com"
+                    # Dejamos que la base de datos asigne el ID autoincremental real por ende NO la agregamos acá.
+                    data_user = {
+                        "username": username_paciente,
+                        "password": password_hash,
+                        "email": email,
+                        "usuario_uuid": str(uuid.uuid4()),
+                    }
+                    # Aquí verificamos si NO está en el SET de Python y además cuidamos que no se duplique dentro del mismo ciclo
+                    if username_paciente not in usernames_existentes:
+                        lista_usuarios_data.append(data_user)
+                        usernames_existentes.add(username_paciente)
+                        
+                        # Acá NO agregamos el "fk_user_id" todavía, porque no sabemos qué ID le dará la BD.
+                        data_paciente = {
+                            "primer_nombre": primer_nombre_paciente,
+                            "segundo_nombre": segundo_nombre_paciente,
+                            "ap_paterno": ap_paterno_paciente,
+                            "ap_materno": ap_materno_paciente,
+                            "edad": edad_paciente,
+                            "sexo": sexo_paciente,
+                            "fono": telefono_paciente,
+                            "paciente_uuid": str(uuid.uuid4()),
+                        }
+                        # Volvemos a agregar los datos a la lista.
+                        lista_paciente_data.append(data_paciente)
             # INSERCIÓN EN LA BASE DE DATOS (USUARIOS).
             # Convertimos los diccionarios a instancias del modelo ANTES del bulk_create.
             instancias_usuarios = [CustomersUsers(**reg) for reg in lista_usuarios_data]
@@ -586,7 +669,7 @@ class Command(BaseCommand):
             try:
                 for paciente in paciente_creados:
                     data_direccion = {
-                        "region": generador_faker.province(),
+                        "region": "Metropolitana",
                         "comuna": random.choice(comunas_chile),
                         "vivienda": generador_faker.random_element(elements=('Casa', 'Departamento', 'Condominio')),
                         "num_vivienda": str(generador_faker.random_int(min=1, max=9999)),
@@ -605,107 +688,311 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"❌ Ocurrió un error inesperado: {e}"))
     
+    # # Método para insertar las reservas.
+    # def insertar_reserva_paciente_registrado(self):
+    #     try:
+    #         #
+    #         self.stdout.write(self.style.SUCCESS("  ✅ Método Insertar las Reservas Iniciando......."))
+    #         # Como este es una INSERCCIÓN MASIVA, no es buena práctica utilizar el metodo all y recorrer todo en 
+    #         # un for, esto sería interminable y a su vez lento, es un trabajo ineficiente para la insercción masiva. 
+    #         # Enotnces lo que debemos hacer, es obtener ese objeto de los modelos y convertirlo de inmediato a lista.
+    #         # En esta lista solo guardamos los IDs necesarios.
+    #         listado_doctores = list(DoctorModel.objects.prefetch_related('doctor_clinica', 'especialidades').all())
+    #         #
+    #         listado_pacientes_ids = list(CustomersUsers.objects.filter(pacientemodel__isnull=False))
+    #         #print(listado_pacientes_ids)
+    #         listado_clinicas = list(ComunaClinicaModel.objects.values_list('id', 'nombre_clinica', 'comuna_clinica', 'direccion_clinica'))
+    #         #print(listado_clinicas)
+    #         # Para las especialidades, si necesitas el nombre y el valor, podemos traer el QuerySet completo
+    #         especialidades = list(Especialidad.objects.values_list('id', 'nombre_especialidad', 'valor_especialidad'))
+    #         #print(especialidades)
+    #         # IDs de los pacientes REGISTRADOS.
+    #         paciente_registrado = list(PacienteModel.objects.values_list('id', flat=True))
+    #         # Elegimos un Doctor al azar de la memoria.
+    #         #print(especialidades)
+    #         listas_reservas = []
+    #         lista_debito = []
+    #         lista_credito = []
+    #         # Conjunto para controlar horarios únicos por doctor
+    #         horarios_ocupados = set()
+    #         objetivo = 34000
+    #         # Realizamos los registros para los INSERT MASIVOS.
+    #         while len(listas_reservas) < objetivo:
+    #             #
+    #             tipo_pago = ""
+    #             pago_realizado = 0
+    #             #
+    #             reserva_cerrada = random.choice([1, 0])
+    #             #
+    #             if reserva_cerrada == 1:
+    #                 #
+    #                 tipo_pago = random.choice(["Crédito", "Débito"])
+    #                 pago_realizado = 1
+    #             #    
+    #             if reserva_cerrada == 0:
+    #                 tipo_pago = random.choice(["Crédito", "Débito", ""])
+    #                 #
+    #                 if tipo_pago == "":
+    #                     pago_realizado = 0
+    #                 if tipo_pago != "":
+    #                     pago_realizado = 1
+    #             #
+    #             reser_anulada = random.choice([1, 0])
+    #             reser_confirmada = 0
+    #             if reser_anulada == 1:
+    #                 reser_confirmada = 0
+    #             if reser_anulada == 0:
+    #                 reser_confirmada = 1
+    #             # Elegimos un Doctor al azar de la lista que tenemos en memoria
+    #             doctor = random.choice(listado_doctores)
+    #             nombre_completo_doctor = f"{doctor.primer_nombre} {doctor.segundo_nombre} {doctor.ap_paterno} {doctor.ap_materno}"
+                
+    #             # Extraemos las clínicas asociadas a este doctor desde la memoria ram (gracias al prefetch_related)
+    #             clinicas_del_doctor = list(doctor.doctor_clinica.all())
+    #             if not clinicas_del_doctor:
+    #                 continue # Si este doctor no tiene clínicas asignadas, saltamos al siguiente
+                
+    #             # Elegimos una clínica válida para el doctor (Este es un objeto completo del modelo)
+    #             clinica_elegida = random.choice(clinicas_del_doctor)
+                
+    #             # Extraemos las especialidades reales del doctor
+    #             especialidades_del_doctor = list(doctor.especialidades.all())
+    #             if not especialidades_del_doctor:
+    #                 continue # Si el doctor no tiene especialidades registradas, saltamos
+                
+    #             # Elegimos una especialidad válida para el doctor (Objeto completo del modelo)
+    #             especialidad_elegida = random.choice(especialidades_del_doctor)
+                
+    #             # Obtenemos la Fecha y Hora actual.
+    #             ahora = datetime.now()
+    #             # Crea días en el futuro, esto para utilizar varias fechas de reservas a futuro.
+    #             # Genera un número entero aleatorio entre 0 y 30.
+    #             # Ese número representa cuántos días hacia adelante se moverá la fecha.
+    #             # Ejemplo: dias_en_el_futuro = 12
+    #             dias_en_el_futuro = random.randint(0, 90)
+    #             # Suma estos días a la fecha actual usando timedelta.
+    #             # Resultado: una fecha futura aleatoria entre hoy y dentro de 30 días.
+    #             objeto_fecha_reserva = ahora + timedelta(days=dias_en_el_futuro)
+    #             # Rango de 8 a 22 hrs de inicio.
+    #             hora_random = random.randint(8, 22)
+    #             # Forzamos el minuto en 00 para que sean HORAS COMPLETAS (no cada 30 min)
+    #             objeto_hora_inicio = datetime.strptime(f"{hora_random}:00", "%H:%M")
+    #             # Sumas una hora, para el campo_hora_termino.
+    #             objeto_hora_termino = objeto_hora_inicio + timedelta(hours=1)
+
+    #             # Pasamos los datos al diccionario.
+    #             datos_reservas = {
+    #                 'fecha_creacion_reserva': datetime.now().strftime('%Y-%m-%d'),
+    #                 'usuario_creacion_reserva': "Admin",
+    #                 'fecha_reserva': objeto_fecha_reserva.date(),
+    #                 # Dará "10:00:00"
+    #                 'hora_inicio': objeto_hora_inicio.strftime('%H:%M:%S'),
+    #                 # Dará "11:00:00"
+    #                 'hora_termino': objeto_hora_termino.strftime('%H:%M:%S'),
+    #                 # Accedemos de forma segura mediante objetos (.nombre_especialidad, .nombre_clinica)
+    #                 'especialidad': especialidad_elegida.nombre_especialidad,
+    #                 'nombre_doctor': nombre_completo_doctor,
+    #                 'nombre_clinica': clinica_elegida.nombre_clinica,
+    #                 'comuna_clinica': clinica_elegida.comuna_clinica,
+    #                 'direccion_clinica': clinica_elegida.direccion_clinica,
+    #                 'tipo_pago': tipo_pago,
+    #                 'reserva_uuid': str(uuid.uuid4()),
+    #                 'reserva_cerrada': reserva_cerrada,
+    #                 'pago_realizado': pago_realizado, 
+    #                 'reser_anulada': reser_anulada,
+    #                 'reser_confirmada': reser_confirmada,
+    #                 # Asignamos el ID directo del paciente a la columna FK física
+    #                 'fk_usuario': random.choice(listado_pacientes_ids),
+    #             }
+    #             # Validación: doctor no puede repetir hora en el mismo día.
+    #             clave_reserva = (
+    #                 doctor.id,
+    #                 objeto_fecha_reserva.date(),
+    #                 objeto_hora_inicio.strftime('%H:%M:%S')
+    #             )
+
+    #             if clave_reserva in horarios_ocupados:
+    #                 # ya existe una reserva en ese horario para este doctor
+    #                 continue
+    #             else:
+    #                 horarios_ocupados.add(clave_reserva)
+    #                 listas_reservas.append(datos_reservas)
+                
+    #         # INSERCCIÓN RESERVAS MASIVA FINAL CON PANDAS
+    #         if listas_reservas:
+    #             #df_reservas = pd.DataFrame(listas_reservas)
+    #             instancias_reserva = [ReservaModel(**reg) for reg in listas_reservas]
+    #             reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva, batch_size=1000)
+
+    #             # Extraemos los UUIDs que acabamos de crear en este método
+    #             uuids_creados = [r['reserva_uuid'] for r in listas_reservas]
+
+    #             # Filtramos para traer SOLO las reservas de este lote
+    #             reservas = list(ReservaModel.objects.filter(reserva_uuid__in=uuids_creados).values_list('id', 'tipo_pago', 'pago_realizado', 'especialidad'))
+
+    #             dict_especialidades = {e.nombre_especialidad: e for e in Especialidad.objects.all()}
+    #             #
+    #             for id, tipo_pago, pago_realizado, especialidad in reservas:
+    #                 valor_especialidad = dict_especialidades.get(especialidad)
+    #                 if not valor_especialidad:
+    #                     continue
+    #                 # id = ReservaModel.objects.get(pk=id)
+    #                 #
+    #                 precio_int = int(valor_especialidad.valor_especialidad)
+    #                 #
+    #                 if pago_realizado == 1 and tipo_pago == "Crédito":
+    #                     cant_cuotas = random.choice([3, 6, 9])
+    #                     monto_cuotas = None
+    #                     if cant_cuotas == 3:
+    #                         monto_cuotas = math.ceil(int(precio_int) / 3)
+    #                     if cant_cuotas == 6:
+    #                         monto_cuotas = math.ceil(int(precio_int) / 6)
+    #                     if cant_cuotas == 9:
+    #                         monto_cuotas = math.ceil(int(precio_int) / 9)
+    #                     credito = {
+    #                         'credito': 1,
+    #                         'fecha_pago': ahora.strftime('%Y-%m-%d %H:%M:%S.%f'),
+    #                         'credito_uuid': str(uuid.uuid4()),
+    #                         'monto': precio_int,
+    #                         'cant_cuotas': cant_cuotas,
+    #                         'monto_total': precio_int,
+    #                         'monto_cuotas': monto_cuotas,
+    #                         # OJO; paraque nos pidauna instancia y no utilizar .get() que es mala práctica 
+    #                         # para efecto de este caso, la columna de la BD; fk_reserva,se le debe agregar el id 
+    #                         # al final y queda así; fk_reserva_id.
+    #                         # Con esto NO ralentizamos el proceso de carga y es una forma eficiente de 
+    #                         # trabajar cargas masivas.
+    #                         'fk_reserva_id': id,
+    #                     }
+    #                     lista_credito.append(credito)
+    #                 #
+    #                 if pago_realizado == 1 and tipo_pago == "Débito":
+    #                     debito = {
+    #                         'debito': 0,
+    #                         'fecha_pago': ahora.strftime('%Y-%m-%d %H:%M:%S.%f'),
+    #                         'debito_uuid': str(uuid.uuid4()),
+    #                         'monto': precio_int,
+    #                         'monto_total': precio_int,
+    #                         # OJO; paraque nos pidauna instancia y no utilizar .get() que es mala práctica 
+    #                         # para efecto de este caso, la columna de la BD; fk_reserva,se le debe agregar el id 
+    #                         # al final y queda así; fk_reserva_id.
+    #                         # Con esto NO ralentizamos el proceso de carga y es una forma eficiente de 
+    #                         # trabajar cargas masivas.
+    #                         'fk_reserva_id': id,
+    #                     }
+    #                     lista_debito.append(debito)
+    #             # Fuera del ciclo for.
+    #             #df_credito = pd.DataFrame(lista_credito)
+    #             instancias_credito = [CreditoModel(**reg) for reg in lista_credito]
+    #             credito_creadas = CreditoModel.objects.bulk_create(instancias_credito, batch_size=1000)
+    #             #df_debito = pd.DataFrame(lista_debito)
+    #             instancias_debito = [DebitoModel(**reg) for reg in lista_debito]
+    #             debito_creadas = DebitoModel.objects.bulk_create(instancias_debito, batch_size=1000)    
+    #             #
+    #             self.stdout.write(self.style.SUCCESS(f"  ✅ Reservas pagadas con DÉBITO o CRÉDITO inyectadas con éxito."))
+    #         else:
+    #             self.stdout.write(self.style.WARNING("  ⚠️ No se generaron reservas válidas para insertar."))
+    #     except Exception as e:
+    #         self.stdout.write(self.style.ERROR(f"❌ Ocurrió un error inesperado: {e}"))
+    
     # Método para insertar las reservas.
-    def insertar_reserva_paciente_registrado(self):
+    def insertar_reserva_paciente_registrado(self, horarios_ocupados=None):
         try:
-            #
             self.stdout.write(self.style.SUCCESS("  ✅ Método Insertar las Reservas Iniciando......."))
-            # Como este es una INSERCCIÓN MASIVA, no es buena práctica utilizar el metodo all y recorrer todo en 
-            # un for, esto sería interminable y a su vez lento, es un trabajo ineficiente para la insercción masiva. 
-            # Enotnces lo que debemos hacer, es obtener ese objeto de los modelos y convertirlo de inmediato a lista.
-            # En esta lista solo guardamos los IDs necesarios.
+            if horarios_ocupados is None:
+                horarios_ocupados = set()
             listado_doctores = list(DoctorModel.objects.prefetch_related('doctor_clinica', 'especialidades').all())
-            #print(listado_doctores)
-            #
             listado_pacientes_ids = list(CustomersUsers.objects.filter(pacientemodel__isnull=False))
-            #print(listado_pacientes_ids)
             listado_clinicas = list(ComunaClinicaModel.objects.values_list('id', 'nombre_clinica', 'comuna_clinica', 'direccion_clinica'))
-            #print(listado_clinicas)
-            # Para las especialidades, si necesitas el nombre y el valor, podemos traer el QuerySet completo
             especialidades = list(Especialidad.objects.values_list('id', 'nombre_especialidad', 'valor_especialidad'))
-            #print(especialidades)
-            # IDs de los pacientes REGISTRADOS.
             paciente_registrado = list(PacienteModel.objects.values_list('id', flat=True))
-            # Elegimos un Doctor al azar de la memoria.
-            #print(especialidades)
+            
             listas_reservas = []
             lista_debito = []
             lista_credito = []
+            
+            # Conjunto para controlar horarios únicos por doctor
+            horarios_ocupados = set()
+            objetivo = 34000
+            
             # Realizamos los registros para los INSERT MASIVOS.
-            for i in range(1, 21):
-                #
+            while len(listas_reservas) < objetivo:
+                
+                # Validaciones de pago.
                 tipo_pago = ""
                 pago_realizado = 0
-                #
                 reserva_cerrada = random.choice([1, 0])
-                #
+                
                 if reserva_cerrada == 1:
-                    #
                     tipo_pago = random.choice(["Crédito", "Débito"])
                     pago_realizado = 1
-                #    
+                    
                 if reserva_cerrada == 0:
                     tipo_pago = random.choice(["Crédito", "Débito", ""])
-                    #
                     if tipo_pago == "":
                         pago_realizado = 0
                     if tipo_pago != "":
                         pago_realizado = 1
-                #
+                        
                 reser_anulada = random.choice([1, 0])
-                reser_confirmada = 0
-                if reser_anulada == 1:
-                    reser_confirmada = 0
-                if reser_anulada == 0:
-                    reser_confirmada = 1
-                # Elegimos un Doctor al azar de la lista que tenemos en memoria
+                reser_confirmada = 0 if reser_anulada == 1 else 1
+                
+                # Elegimos el Doctor y sus datos
                 doctor = random.choice(listado_doctores)
                 nombre_completo_doctor = f"{doctor.primer_nombre} {doctor.segundo_nombre} {doctor.ap_paterno} {doctor.ap_materno}"
                 
-                # Extraemos las clínicas asociadas a este doctor desde la memoria ram (gracias al prefetch_related)
                 clinicas_del_doctor = list(doctor.doctor_clinica.all())
                 if not clinicas_del_doctor:
-                    continue # Si este doctor no tiene clínicas asignadas, saltamos al siguiente
-                
-                # Elegimos una clínica válida para el doctor (Este es un objeto completo del modelo)
+                    continue 
                 clinica_elegida = random.choice(clinicas_del_doctor)
                 
-                # Extraemos las especialidades reales del doctor
                 especialidades_del_doctor = list(doctor.especialidades.all())
                 if not especialidades_del_doctor:
-                    continue # Si el doctor no tiene especialidades registradas, saltamos
-                
-                # Elegimos una especialidad válida para el doctor (Objeto completo del modelo)
+                    continue 
                 especialidad_elegida = random.choice(especialidades_del_doctor)
                 
-                # Obtenemos la Fecha y Hora actual.
                 ahora = datetime.now()
-                # Crea días en el futuro, esto para utilizar varias fechas de reservas a futuro.
-                # Genera un número entero aleatorio entre 0 y 30.
-                # Ese número representa cuántos días hacia adelante se moverá la fecha.
-                # Ejemplo: dias_en_el_futuro = 12
-                dias_en_el_futuro = random.randint(0, 30)
-                # Suma estos días a la fecha actual usando timedelta.
-                # Resultado: una fecha futura aleatoria entre hoy y dentro de 30 días.
+                dias_en_el_futuro = random.randint(0, 90)
                 objeto_fecha_reserva = ahora + timedelta(days=dias_en_el_futuro)
-                # Rango de 8 a 22 hrs de inicio.
-                hora_random = random.randint(8, 22)
-                # Forzamos el minuto en 00 para que sean HORAS COMPLETAS (no cada 30 min)
-                objeto_hora_inicio = datetime.strptime(f"{hora_random}:00", "%H:%M")
-                # Sumas una hora, para el campo_hora_termino.
-                objeto_hora_termino = objeto_hora_inicio + timedelta(hours=1)
+                fecha_formateada = objeto_fecha_reserva.date()
 
-                # Pasamos los datos al diccionario.
+                # ================================================================
+                # BUSCADOR DE HORARIOS DISPONIBLES PARA EL DOCTOR
+                # ================================================================
+                hora_encontrada = False
+                intentos_hora = 0
+                
+                # Intentaremos un máximo de 15 veces buscar una hora libre para este doctor en este día.
+                while intentos_hora < 15:
+                    hora_random = random.randint(8, 22)
+                    objeto_hora_inicio = datetime.strptime(f"{hora_random}:00", "%H:%M")
+                    hora_inicio_str = objeto_hora_inicio.strftime('%H:%M:%S')
+                    
+                    # Estructuramos la clave única
+                    clave_reserva = (doctor.id, fecha_formateada, hora_inicio_str)
+                    
+                    # Si NO está en nuestro set, significa que la agenda está libre a esa hora
+                    if clave_reserva not in horarios_ocupados:
+                        horarios_ocupados.add(clave_reserva)
+                        objeto_hora_termino = objeto_hora_inicio + timedelta(hours=1)
+                        hora_encontrada = True
+                        # Rompe el ciclo while interno de inmediato porque encontramos hora libre
+                        break
+                        
+                    intentos_hora += 1
+                
+                # Si tras 15 intentos el doctor está colapsado en ese día, saltamos a elegir otro doctor
+                if not hora_encontrada:
+                    continue
+                # ================================================================
+
+                # Pasamos los datos seguros al diccionario (ya garantizados sin colisiones)
                 datos_reservas = {
                     'fecha_creacion_reserva': datetime.now().strftime('%Y-%m-%d'),
                     'usuario_creacion_reserva': "Admin",
-                    'fecha_reserva': objeto_fecha_reserva.date(),
-                    # Formateamos como String estricto para evitar transformaciones raras de Pandas.
-                    # Dará "10:00:00"
+                    'fecha_reserva': fecha_formateada,
                     'hora_inicio': objeto_hora_inicio.strftime('%H:%M:%S'),
-                    # Dará "11:00:00"
                     'hora_termino': objeto_hora_termino.strftime('%H:%M:%S'),
-                    # Accedemos de forma segura mediante objetos (.nombre_especialidad, .nombre_clinica)
                     'especialidad': especialidad_elegida.nombre_especialidad,
                     'nombre_doctor': nombre_completo_doctor,
                     'nombre_clinica': clinica_elegida.nombre_clinica,
@@ -717,45 +1004,31 @@ class Command(BaseCommand):
                     'pago_realizado': pago_realizado, 
                     'reser_anulada': reser_anulada,
                     'reser_confirmada': reser_confirmada,
-                    # Asignamos el ID directo del paciente a la columna FK física
                     'fk_usuario': random.choice(listado_pacientes_ids),
                 }
-                # 
+                
                 listas_reservas.append(datos_reservas)
                 
-            # INSERCCIÓN RESERVAS MASIVA FINAL CON PANDAS
+            # INSERCCIÓN RESERVAS MASIVA FINAL CON PANDAS (El resto de tu código queda idéntico)
             if listas_reservas:
-                print("Ingresamos a la RESERVA.")
-                df_reservas = pd.DataFrame(listas_reservas)
-                instancias_reserva = [ReservaModel(**reg) for reg in df_reservas.to_dict('records')]
+                instancias_reserva = [ReservaModel(**reg) for reg in listas_reservas]
                 reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva, batch_size=1000)
-
-                # Extraemos los UUIDs que acabamos de crear en este método
+                
                 uuids_creados = [r['reserva_uuid'] for r in listas_reservas]
-
-                # Filtramos para traer SOLO las reservas de este lote
                 reservas = list(ReservaModel.objects.filter(reserva_uuid__in=uuids_creados).values_list('id', 'tipo_pago', 'pago_realizado', 'especialidad'))
-
+                
                 dict_especialidades = {e.nombre_especialidad: e for e in Especialidad.objects.all()}
-                #
+                
                 for id, tipo_pago, pago_realizado, especialidad in reservas:
-                    print("Ingresamos a la lista de la RESERVA")
                     valor_especialidad = dict_especialidades.get(especialidad)
                     if not valor_especialidad:
                         continue
-                    # id = ReservaModel.objects.get(pk=id)
-                    #
+                    
                     precio_int = int(valor_especialidad.valor_especialidad)
-                    #
+                    
                     if pago_realizado == 1 and tipo_pago == "Crédito":
                         cant_cuotas = random.choice([3, 6, 9])
-                        monto_cuotas = None
-                        if cant_cuotas == 3:
-                            monto_cuotas = math.ceil(int(precio_int) / 3)
-                        if cant_cuotas == 6:
-                            monto_cuotas = math.ceil(int(precio_int) / 6)
-                        if cant_cuotas == 9:
-                            monto_cuotas = math.ceil(int(precio_int) / 9)
+                        monto_cuotas = math.ceil(precio_int / cant_cuotas)
                         credito = {
                             'credito': 1,
                             'fecha_pago': ahora.strftime('%Y-%m-%d %H:%M:%S.%f'),
@@ -764,15 +1037,10 @@ class Command(BaseCommand):
                             'cant_cuotas': cant_cuotas,
                             'monto_total': precio_int,
                             'monto_cuotas': monto_cuotas,
-                            # OJO; paraque nos pidauna instancia y no utilizar .get() que es mala práctica 
-                            # para efecto de este caso, la columna de la BD; fk_reserva,se le debe agregar el id 
-                            # al final y queda así; fk_reserva_id.
-                            # Con esto NO ralentizamos el proceso de carga y es una forma eficiente de 
-                            # trabajar cargas masivas.
                             'fk_reserva_id': id,
                         }
                         lista_credito.append(credito)
-                    #
+                        
                     if pago_realizado == 1 and tipo_pago == "Débito":
                         debito = {
                             'debito': 0,
@@ -780,22 +1048,16 @@ class Command(BaseCommand):
                             'debito_uuid': str(uuid.uuid4()),
                             'monto': precio_int,
                             'monto_total': precio_int,
-                            # OJO; paraque nos pidauna instancia y no utilizar .get() que es mala práctica 
-                            # para efecto de este caso, la columna de la BD; fk_reserva,se le debe agregar el id 
-                            # al final y queda así; fk_reserva_id.
-                            # Con esto NO ralentizamos el proceso de carga y es una forma eficiente de 
-                            # trabajar cargas masivas.
                             'fk_reserva_id': id,
                         }
                         lista_debito.append(debito)
-                # Fuera del ciclo for.
-                df_credito = pd.DataFrame(lista_credito)
-                instancias_credito = [CreditoModel(**reg) for reg in df_credito.to_dict('records')]
-                credito_creadas = CreditoModel.objects.bulk_create(instancias_credito, batch_size=1000)
-                df_debito = pd.DataFrame(lista_debito)
-                instancias_debito = [DebitoModel(**reg) for reg in df_debito.to_dict('records')]
-                debito_creadas = DebitoModel.objects.bulk_create(instancias_debito, batch_size=1000)    
-                #
+                        
+                instancias_credito = [CreditoModel(**reg) for reg in lista_credito]
+                CreditoModel.objects.bulk_create(instancias_credito, batch_size=1000)
+                
+                instancias_debito = [DebitoModel(**reg) for reg in lista_debito]
+                DebitoModel.objects.bulk_create(instancias_debito, batch_size=1000)    
+                
                 self.stdout.write(self.style.SUCCESS(f"  ✅ Reservas pagadas con DÉBITO o CRÉDITO inyectadas con éxito."))
             else:
                 self.stdout.write(self.style.WARNING("  ⚠️ No se generaron reservas válidas para insertar."))
@@ -891,10 +1153,9 @@ class Command(BaseCommand):
         if not historial_pac_registrado:
             self.stdout.write(self.style.WARNING("⚠️ No se encontraron historiales aptos para insertar."))
             return
-
         # Creamos el DataFrame para la insercción masiva en la BD.
-        df_historial = pd.DataFrame(historial_pac_registrado)
-        instancias_historial = [HistorialClinicoModel(**reg) for reg in df_historial.to_dict('records')]
+        #df_historial = pd.DataFrame(historial_pac_registrado)
+        instancias_historial = [HistorialClinicoModel(**reg) for reg in historial_pac_registrado]
         # Realizamos el insert a la BD.
         HistorialClinicoModel.objects.bulk_create(instancias_historial, batch_size=1000)
         self.stdout.write(self.style.SUCCESS("  ✅ HISTORIAL CLÍNICO DE PACIENTES REGISTRADOS inyectados con coherencia total."))
@@ -909,51 +1170,84 @@ class Command(BaseCommand):
         # Inicializamos las listas.
         lista_paciente_data = []
         
-        # Creamos del 1 al 41 que es la cantidad de DOCTORES a poblar.
+        # Creamos la cantidad de pac no registrado a poblar.
         for i in range(1, 2501):
-            primer_nombre_paciente = generador_faker.first_name()
-            segundo_nombre_paciente = generador_faker.first_name()
-            ap_paterno_paciente = generador_faker.last_name()
-            ap_materno_paciente = generador_faker.last_name()
-            edad_paciente = generador_faker.random_int(min=0, max=100)
-            sexo_paciente = generador_faker.random_element(elements=('M', 'F'))
-            telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
-            
-            # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
-            primer_nombre_corto = primer_nombre_paciente[:3].lower()
-            ap_paterno_corto = ap_paterno_paciente[:3].lower()
-            username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
-            email = f"{username_paciente}@gmail.com"
+            sexo = random.choice(['M', 'F'])
+            edad = fake.random_int(min=25, max=95)
+            if sexo == 'M':
+                primer_nombre_paciente = generador_faker.first_name_male()
+                segundo_nombre_paciente = generador_faker.first_name_male()
+                ap_paterno_paciente = generador_faker.last_name()
+                ap_materno_paciente = generador_faker.last_name()
+                edad_paciente = edad
+                sexo_paciente = 'M'
+                telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
                 
-            # Creamos losdatos del PACIENTE NO REGISTRADOS.
-            data_paciente_no_registrado = {
-                "primer_nombre": primer_nombre_paciente,
-                "segundo_nombre": segundo_nombre_paciente,
-                "ap_paterno": ap_paterno_paciente,
-                "ap_materno": ap_materno_paciente,
-                "edad": edad_paciente,
-                "sexo": sexo_paciente,
-                "fono": telefono_paciente,
-                "email": email,
-                "paciente_uuid": str(uuid.uuid4()),
-            }
-            # Volvemos a agregar los datos a la lista.
-            lista_paciente_data.append(data_paciente_no_registrado)
+                # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
+                primer_nombre_corto = primer_nombre_paciente[:3].lower()
+                ap_paterno_corto = ap_paterno_paciente[:3].lower()
+                username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
+                email = f"{username_paciente}@gmail.com"
+                    
+                # Creamos los datos del PACIENTE NO REGISTRADOS.
+                data_paciente_no_registrado = {
+                    "primer_nombre": primer_nombre_paciente,
+                    "segundo_nombre": segundo_nombre_paciente,
+                    "ap_paterno": ap_paterno_paciente,
+                    "ap_materno": ap_materno_paciente,
+                    "edad": edad_paciente,
+                    "sexo": sexo_paciente,
+                    "fono": telefono_paciente,
+                    "email": email,
+                    "paciente_uuid": str(uuid.uuid4()),
+                }
+                # Volvemos a agregar los datos a la lista.
+                lista_paciente_data.append(data_paciente_no_registrado)
+            else:
+                primer_nombre_paciente = generador_faker.first_name_male()
+                segundo_nombre_paciente = generador_faker.first_name_male()
+                ap_paterno_paciente = generador_faker.last_name()
+                ap_materno_paciente = generador_faker.last_name()
+                edad_paciente = edad
+                sexo_paciente = 'F'
+                telefono_paciente = f"+56 9{generador_faker.random_int(min=10000000, max=99999999)}"
+                # Generamos datos de acceso únicos como e username y gmail a partir de los nombres y apellidos.
+                primer_nombre_corto = primer_nombre_paciente[:3].lower()
+                ap_paterno_corto = ap_paterno_paciente[:3].lower()
+                username_paciente = f"{primer_nombre_corto}{ap_paterno_corto}_{i}_{generador_faker.random_int(100,999)}"
+                email = f"{username_paciente}@gmail.com"
+                    
+                # Creamos losdatos del PACIENTE NO REGISTRADOS.
+                data_paciente_no_registrado = {
+                    "primer_nombre": primer_nombre_paciente,
+                    "segundo_nombre": segundo_nombre_paciente,
+                    "ap_paterno": ap_paterno_paciente,
+                    "ap_materno": ap_materno_paciente,
+                    "edad": edad_paciente,
+                    "sexo": sexo_paciente,
+                    "fono": telefono_paciente,
+                    "email": email,
+                    "paciente_uuid": str(uuid.uuid4()),
+                }
+                # Volvemos a agregar los datos a la lista.
+                lista_paciente_data.append(data_paciente_no_registrado)
         # INSERCIÓN EN LA BASE DE DATOS.
         # Creamos DataFrame con los datos de las listas.
-        df_pac_no_registrado = pd.DataFrame(lista_paciente_data)
+        #df_pac_no_registrado = pd.DataFrame(lista_paciente_data)
         # Convertimos la lista a diccionario e instanciamos su modelo.
-        instancias_paciente = [PacienteNoRegisterModel(**reg) for reg in df_pac_no_registrado.to_dict('records')]
+        instancias_paciente = [PacienteNoRegisterModel(**reg) for reg in lista_paciente_data]
         # Realizamos el insert.
         # Acá obtenemos los id incertados de los pacientes.
         PacienteNoRegisterModel.objects.bulk_create(instancias_paciente, batch_size=1000)
         self.stdout.write(self.style.SUCCESS("  ✅ PACIENTE NO REGISTRADO INSERTADOS CORRECTAMENTE"))
     
     # Método para insertar las reservas.
-    def insertar_reserva_paciente_no_registrado(self):
+    def insertar_reserva_paciente_no_registrado(self,horarios_ocupados=None):
         try:
             #
             self.stdout.write(self.style.SUCCESS("  ✅ Método Insertar las Reservas Iniciando......."))
+            if horarios_ocupados is None:
+                horarios_ocupados = set()
             # Como este es una INSERCCIÓN MASIVA, no es buena práctica utilizar el metodo all y recorrer todo en 
             # un for, esto sería interminable y a su vez lento, es un trabajo ineficiente para la insercción masiva. 
             # Enotnces lo que debemos hacer, es obtener ese objeto de los modelos y convertirlo de inmediato a lista.
@@ -971,8 +1265,11 @@ class Command(BaseCommand):
             listas_reservas = []
             lista_debito = []
             lista_credito = []
+            # Conjunto para controlar horarios únicos por doctor
+            horarios_ocupados = set()
+            objetivo = 34000
             # Realizamos los registros para los INSERT MASIVOS.
-            for i in range(1, 21):
+            while len(listas_reservas) < objetivo:
                 #
                 tipo_pago = ""
                 pago_realizado = 0
@@ -1024,17 +1321,37 @@ class Command(BaseCommand):
                 # Genera un número entero aleatorio entre 0 y 30.
                 # Ese número representa cuántos días hacia adelante se moverá la fecha.
                 # Ejemplo: dias_en_el_futuro = 12
-                dias_en_el_futuro = random.randint(0, 30)
-                # Suma estos días a la fecha actual usando timedelta.
-                # Resultado: una fecha futura aleatoria entre hoy y dentro de 30 días.
+                ahora = datetime.now()
+                dias_en_el_futuro = random.randint(0, 90)
                 objeto_fecha_reserva = ahora + timedelta(days=dias_en_el_futuro)
-                # Rango de 8 a 22 hrs de inicio.
-                hora_random = random.randint(8, 22)
-                # Forzamos el minuto en 00 para que sean HORAS COMPLETAS (no cada 30 min)
-                objeto_hora_inicio = datetime.strptime(f"{hora_random}:00", "%H:%M")
-                # Sumas una hora, para el campo_hora_termino.
-                objeto_hora_termino = objeto_hora_inicio + timedelta(hours=1)
-
+                fecha_formateada = objeto_fecha_reserva.date()
+                # ================================================================
+                hora_encontrada = False
+                intentos_hora = 0
+                
+                # Intentaremos un máximo de 15 veces buscar una hora libre para este doctor en este día.
+                while intentos_hora < 15:
+                    hora_random = random.randint(8, 22)
+                    objeto_hora_inicio = datetime.strptime(f"{hora_random}:00", "%H:%M")
+                    hora_inicio_str = objeto_hora_inicio.strftime('%H:%M:%S')
+                    
+                    # Estructuramos la clave única
+                    clave_reserva = (doctor.id, fecha_formateada, hora_inicio_str)
+                    
+                    # Si NO está en nuestro set, significa que la agenda está libre a esa hora
+                    if clave_reserva not in horarios_ocupados:
+                        horarios_ocupados.add(clave_reserva)
+                        objeto_hora_termino = objeto_hora_inicio + timedelta(hours=1)
+                        hora_encontrada = True
+                        # Rompe el ciclo while interno de inmediato porque encontramos hora libre
+                        break
+                        
+                    intentos_hora += 1
+                
+                # Si tras 15 intentos el doctor está colapsado en ese día, saltamos a elegir otro doctor
+                if not hora_encontrada:
+                    continue
+                # ================================================================
                 # Pasamos los datos al diccionario.
                 datos_reservas = {
                     'fecha_creacion_reserva': datetime.now().strftime('%Y-%m-%d'),
@@ -1059,15 +1376,16 @@ class Command(BaseCommand):
                     'reser_confirmada': reser_confirmada,
                     # Asignamos el ID directo del paciente a la columna FK física
                     'fk_pac_no_register_id': random.choice(paciente_registrado),
+                    'fk_usuario_id': None,
                 }
                 # 
                 listas_reservas.append(datos_reservas)
                 
-            # INSERCCIÓN RESERVAS MASIVA FINAL CON PANDAS
+            # INSERCCIÓN RESERVAS MASIVA FINAL.
             if listas_reservas:
                 print("Ingresamos a la RESERVA DEL PACIENTE NO REGISTRADO.")
-                df_reservas = pd.DataFrame(listas_reservas)
-                instancias_reserva = [ReservaModel(**reg) for reg in df_reservas.to_dict('records')]
+                #df_reservas = pd.DataFrame(listas_reservas)
+                instancias_reserva = [ReservaModel(**reg) for reg in listas_reservas]
                 reservas_creadas = ReservaModel.objects.bulk_create(instancias_reserva, batch_size=1000)
 
                 # Extraemos los UUIDs que acabamos de crear en este método para pacientes no registrados.
@@ -1140,11 +1458,11 @@ class Command(BaseCommand):
                         }
                         lista_debito.append(debito)
                 # Fuera del ciclo for.
-                df_credito = pd.DataFrame(lista_credito)
-                instancias_credito = [CreditoModel(**reg) for reg in df_credito.to_dict('records')]
+                # df_credito = pd.DataFrame(lista_credito)
+                instancias_credito = [CreditoModel(**reg) for reg in lista_credito]
                 credito_creadas = CreditoModel.objects.bulk_create(instancias_credito, batch_size=1000)
-                df_debito = pd.DataFrame(lista_debito)
-                instancias_debito = [DebitoModel(**reg) for reg in df_debito.to_dict('records')]
+                # df_debito = pd.DataFrame(lista_debito)
+                instancias_debito = [DebitoModel(**reg) for reg in lista_debito]
                 debito_creadas = DebitoModel.objects.bulk_create(instancias_debito, batch_size=1000)    
                 #
                 self.stdout.write(self.style.SUCCESS(f"  ✅ Reservas pagadas con DÉBITO o CRÉDITO inyectadas con éxito PACIENTE NO REGISTRADO."))
