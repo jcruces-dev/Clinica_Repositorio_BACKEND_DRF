@@ -59,9 +59,10 @@ def clasificar_intencion(mensaje):
         Eres un asistente de una clínica médica. Clasifica la intención del usuario en una de estas opciones:
 
         - "anular_reserva": el usuario quiere cancelar, anular o eliminar su cita
-        - "informacion_reserva": el usuario quiere saber información de su cita
+        - "informacion_reserva": el usuario quiere saber información de su cita, consultar o ver el estado de su reserva
         - "consultar_doctor": el usuario pregunta por doctores o especialidades
         - "consultar_clinica": el usuario pregunta por clínicas o ubicaciones
+        - "solicitar_reserva": el usuario quiere agendar, reservar o pedir una nueva cita/hora médica
         - "otro": no encaja en ninguna de las anteriores
 
         Devuelve SOLO UN JSON con el formato:
@@ -83,9 +84,10 @@ def extraer_entidades(mensaje, intencion):
         Intención detectada: {intencion}
 
         Extrae SOLO los campos relevantes según la intención:
-        - Si es "anular_reserva" o "informacion_reserva": extrae "codigo" (código de reserva)
+        - Si es "anular_reserva" o "informacion_reserva": extrae "codigo" (código de reserva / UUID)
         - Si es "consultar_doctor": extrae "especialidad" o "nombre_doctor"
         - Si es "consultar_clinica": extrae "nombre_clinica" o "comuna"
+        - Si es "solicitar_reserva": extrae "especialidad" si la menciona
 
         Devuelve SOLO UN JSON con las entidades encontradas.
         Si no encuentra ninguna, devuelve {{}}.
@@ -93,6 +95,15 @@ def extraer_entidades(mensaje, intencion):
         Mensaje del usuario: "{mensaje}"
     """
     resultado = llamar_deepseek(prompt)
+
+    # Asegurar extracción de código por Expresión Regular si DeepSeek no lo detecta
+    if intencion in ["anular_reserva", "informacion_reserva"]:
+        codigo_regex = extraer_codigo(mensaje)
+        if codigo_regex:
+            if not isinstance(resultado, dict):
+                resultado = {}
+            resultado["codigo"] = codigo_regex
+
     if resultado and isinstance(resultado, dict):
         return resultado
     return {}
@@ -131,6 +142,9 @@ def generar_respuesta(intencion, entidades, estado=None):
             return f"🏥 Buscando clínicas en {comuna}..."
         else:
             return "🏥 ¿Qué clínica o comuna te interesa?"
+
+    elif intencion == "solicitar_reserva":
+        return "📝 ¡Con gusto te ayudo a agendar una hora! Para comenzar, indícame tu RUT (formato: 12345678-9):"
 
     else:
         return "👋 Hola, ¿cómo puedo ayudarte? Puedo consultar tu reserva, anular una cita o darte información de doctores y clínicas."
@@ -210,7 +224,28 @@ VALIDADORES_CAMPOS = {
 
 # ========== DETECCIÓN DE INTENCIÓN: SOLICITAR NUEVA RESERVA ==========
 def es_solicitud_nueva_reserva(mensaje):
+    """
+    Detecta de forma estricta si el usuario solicita agendar una NUEVA reserva/cita.
+    Evita activarse si el mensaje busca consultar o saber información.
+    """
     mensaje_lower = mensaje.lower()
+
+    # Si busca información o consulta, NUNCA es una solicitud de agendamiento
+    palabras_consulta = [
+        "saber",
+        "informacion",
+        "información",
+        "consultar",
+        "ver",
+        "estado",
+        "anular",
+        "cancelar",
+        "codigo",
+        "código",
+    ]
+    if any(p in mensaje_lower for p in palabras_consulta):
+        return False
+
     frases_clave = [
         "quiero solicitar una reserva",
         "quiero pedir una hora",
@@ -237,22 +272,42 @@ def es_solicitud_nueva_reserva(mensaje):
         "tomar una cita",
         "requiero una reserva",
         "requiero una cita",
-        "requiero pedir una hora",
-        "quiero hacer una reserva",
         "quisiera hacer una reserva",
         "quisiera agendar",
         "quisiera una cita",
         "quisiera una hora",
-        "necesito hacer una reserva",
         "necesito una hora médica",
-        "necesito realizar una reserva o cita",
         "quiero una hora médica",
         "reservar una hora médica",
         "solicitar una hora médica",
         "pedir una hora médica",
         "agendar una hora médica",
+        "me gustaría reservar",
+        "me gustaría agendar",
+        "deseo reservar",
+        "deseo agendar",
+        "quiero reservar",
+        "necesito reservar",
+        "realizar una reserva",
+        "tomar una reserva",
+        "sacar una hora",
+        "sacar una cita",
+        "pedir una reserva",
+        "solicitar una cita",
+        "nueva reserva",
+        "nueva cita",
+        "nueva hora",
     ]
-    return any(frase in mensaje_lower for frase in frases_clave)
+
+    tiene_reserva = any(p in mensaje_lower for p in ["reserva", "cita", "hora"])
+    tiene_verbo_agendar = any(
+        p in mensaje_lower
+        for p in ["agendar", "solicitar", "pedir", "reservar", "tomar", "sacar"]
+    )
+
+    return any(frase in mensaje_lower for frase in frases_clave) or (
+        tiene_reserva and tiene_verbo_agendar
+    )
 
 
 # ========== WIZARD: PASOS PARA RECOLECTAR DATOS ==========
@@ -304,11 +359,9 @@ PASOS_FLUJO_RESERVA_NO_REGISTRADO = (
 
 # ========== CONSULTAS DE BASE DE DATOS Y FORMATEO ==========
 def obtener_clinicas_por_especialidad(especialidad_nombre):
-    """Retorna una lista de clínicas que tienen doctores de la especialidad indicada."""
     try:
         especialidad = Especialidad.objects.get(nombre_especialidad=especialidad_nombre)
         doctores = DoctorModel.objects.filter(especialidades=especialidad)
-        # Usamos la relación inversa doctormodel_set
         clinicas = ComunaClinicaModel.objects.filter(
             doctormodel__in=doctores
         ).distinct()
@@ -318,7 +371,6 @@ def obtener_clinicas_por_especialidad(especialidad_nombre):
 
 
 def obtener_doctores_por_especialidad_y_clinica(especialidad_nombre, clinica_nombre):
-    """Retorna una lista de doctores que tienen la especialidad y trabajan en la clínica indicada."""
     try:
         especialidad = Especialidad.objects.get(nombre_especialidad=especialidad_nombre)
         clinica = ComunaClinicaModel.objects.get(nombre_clinica=clinica_nombre)
@@ -449,7 +501,7 @@ def finalizar_reserva_no_registrado(estado):
 def manejar_flujo_reserva_no_registrado(mensaje, estado):
     paso = estado["paso"]
 
-    # --- Paso: RUT (Primer paso del registro) ---
+    # --- Paso: RUT ---
     if paso == "reg_rut":
         rut_ingresado = mensaje.strip()
         if not validar_rut(rut_ingresado):
@@ -489,7 +541,6 @@ def manejar_flujo_reserva_no_registrado(mensaje, estado):
         if paso == nombre_paso:
             valor = mensaje.strip()
 
-            # --- Caso especial: Especialidad ---
             if campo == "especialidad":
                 try:
                     especialidad_obj = Especialidad.objects.get(
@@ -511,7 +562,6 @@ def manejar_flujo_reserva_no_registrado(mensaje, estado):
                 except Especialidad.DoesNotExist:
                     return "❌ No encontré esa especialidad. Por favor, intenta con otra (ej: Cardiología, Traumatología, etc.)."
 
-            # --- Caso especial: Clínica ---
             if campo == "clinica":
                 clinicas = estado.get("clinicas_disponibles", [])
                 if not validar_seleccion(valor, clinicas):
@@ -544,7 +594,6 @@ def manejar_flujo_reserva_no_registrado(mensaje, estado):
                 )
                 return f"🧑‍⚕️ Estos son los doctores disponibles para {especialidad_nombre} en {clinica_elegida.nombre_clinica}:\n\n{lista}\n\nEscribe el número del doctor que prefieras:"
 
-            # --- Caso especial: Doctor ---
             if campo == "nombre_doctor":
                 doctores = estado.get("doctores_disponibles", [])
                 if not validar_seleccion(valor, doctores):
@@ -560,7 +609,6 @@ def manejar_flujo_reserva_no_registrado(mensaje, estado):
                 estado["paso"] = PASOS_RESERVA[3][0]
                 return f"✅ Has seleccionado al Dr/a. {nombre_completo}\n\n{PASOS_RESERVA[3][2]}"
 
-            # --- Validaciones para fecha y hora ---
             validador = VALIDADORES_CAMPOS.get(campo)
             if validador and not validador(valor):
                 return f"⚠️ El dato ingresado no parece válido. {pregunta}"
@@ -648,7 +696,6 @@ def obtener_respuesta(request):
         estado = estados_conversacion[session_id]
 
         # ========== PRIORIDAD 1: DETECTAR SOLICITUD DE NUEVA RESERVA ==========
-        # Inicia directamente el registro en 'reg_rut' sin preguntar si ya está registrado
         if estado["paso"] == "inicio" and es_solicitud_nueva_reserva(mensaje):
             estado["paso"] = "reg_rut"
             estado["intencion"] = "solicitar_reserva"
@@ -707,13 +754,7 @@ def obtener_respuesta(request):
                     return Response(
                         {
                             "session_id": session_id,
-                            "respuesta": f"""📋 **Información de tu reserva:**
-                            - **Doctor:** {reserva.nombre_doctor}
-                            - **Especialidad:** {reserva.especialidad}
-                            - **Fecha:** {reserva.fecha_reserva}
-                            - **Hora:** {reserva.hora_inicio} - {reserva.hora_termino}
-                            - **Clínica:** {reserva.nombre_clinica}
-                            - **Estado:** {'Anulada' if reserva.reser_anulada else 'Activa'}""",
+                            "respuesta": f"📋 **Información de tu reserva:**\n- **Doctor:** {reserva.nombre_doctor}\n- **Especialidad:** {reserva.especialidad}\n- **Fecha:** {reserva.fecha_reserva}\n- **Hora:** {reserva.hora_inicio} - {reserva.hora_termino}\n- **Clínica:** {reserva.nombre_clinica}\n- **Estado:** {'Anulada' if reserva.reser_anulada else 'Activa'}",
                             "intencion": "informacion_reserva",
                         },
                         status=status.HTTP_200_OK,
@@ -797,13 +838,7 @@ def obtener_respuesta(request):
                     return Response(
                         {
                             "session_id": session_id,
-                            "respuesta": f"""📋 **Información de tu reserva:**
-                            - **Doctor:** {reserva.nombre_doctor}
-                            - **Especialidad:** {reserva.especialidad}
-                            - **Fecha:** {reserva.fecha_reserva}
-                            - **Hora:** {reserva.hora_inicio} - {reserva.hora_termino}
-                            - **Clínica:** {reserva.nombre_clinica}
-                            - **Estado:** {'Anulada' if reserva.reser_anulada else 'Activa'}""",
+                            "respuesta": f"📋 **Información de tu reserva:**\n- **Doctor:** {reserva.nombre_doctor}\n- **Especialidad:** {reserva.especialidad}\n- **Fecha:** {reserva.fecha_reserva}\n- **Hora:** {reserva.hora_inicio} - {reserva.hora_termino}\n- **Clínica:** {reserva.nombre_clinica}\n- **Estado:** {'Anulada' if reserva.reser_anulada else 'Activa'}",
                             "intencion": intencion,
                             "entidades": entidades,
                         },
@@ -834,6 +869,20 @@ def obtener_respuesta(request):
                     },
                     status=status.HTTP_200_OK,
                 )
+
+        elif intencion == "solicitar_reserva":
+            estado["paso"] = "reg_rut"
+            estado["datos_paciente"] = {}
+            estado["datos_reserva"] = {}
+            estado["paciente_id"] = None
+            return Response(
+                {
+                    "session_id": session_id,
+                    "respuesta": "📝 Para comenzar con tu reserva, indícame tu RUT (formato: 12345678-9):",
+                    "intencion": "solicitar_reserva",
+                },
+                status=status.HTTP_200_OK,
+            )
 
         # ========== OTRAS INTENCIONES ==========
         respuesta = generar_respuesta(intencion, entidades)
