@@ -670,6 +670,7 @@ def manejar_flujo_reserva_no_registrado(mensaje, estado):
 @permission_classes([AllowAny])
 def obtener_respuesta(request):
     try:
+        print("Ingresamos lko JAIR")
         mensaje = request.data.get("pregunta", "")
         session_id = request.data.get("session_id", "")
 

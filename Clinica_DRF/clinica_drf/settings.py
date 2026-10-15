@@ -20,92 +20,118 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 1. INICIALIZAR EL OBJETO ENV (ESTO ES LO QUE TE FALTA)
 env = environ.Env(
-    DEBUG=(bool, False) # Esto permite que DEBUG sea tratado como Booleano
+    DEBUG=(bool, False)  # Esto permite que DEBUG sea tratado como Booleano
 )
 # 2. Leer el archivo .env ubicado en la raíz del proyecto
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
+SECRET_KEY = env("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG') == 'True'
+DEBUG = env.bool("DEBUG", False)
 
-ALLOWED_HOSTS = ['jacruces91.pythonanywhere.com', 'localhost', '127.0.0.1']
+# DEBUG = os.environ.get("DEBUG") == "True"
+
+# ALLOWED_HOSTS = ["jacruces91.pythonanywhere.com", "localhost", "127.0.0.1"]
 # Permitir solo tu origen local específico (Recomendado)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://localhost:3000",
-    "http://127.0.0.1:8000",
-]
+ALLOWED_HOSTS = env.list(
+    "ALLOWED_HOSTS",
+    default=[
+        "backend-service",
+        "localhost",
+        "127.0.0.1",
+        "dev.clinica.local",
+        "test.clinica.local",
+        "jacruces91.pythonanywhere.com",
+    ],
+)
 # Application definition
 CORS_ALLOW_CREDENTIALS = True
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'usuarios',
-    'rest_framework',
-    'corsheaders',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "usuarios",
+    "rest_framework",
+    "corsheaders",
     # Generamos el módulo de token de drf.
-    'rest_framework.authtoken',
-    'consulta',
-    'direccion',
-    'grupo',
-    'especialidad',
-    'reserva',
-    'credito',
-    'debito',
-    'doctor',
-    'paciente',
-    'secretaria',
-    'comuna_clinica',
-    'historial_clinico',
-    'descuento',
-    'chatBot',
-    'paciente_no_registrado',
-    'historial_pac_no_registrado',
+    "rest_framework.authtoken",
+    "consulta",
+    "direccion",
+    "grupo",
+    "especialidad",
+    "reserva",
+    "credito",
+    "debito",
+    "doctor",
+    "paciente",
+    "secretaria",
+    "comuna_clinica",
+    "historial_clinico",
+    "descuento",
+    "chatBot",
+    "paciente_no_registrado",
+    "historial_pac_no_registrado",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+#
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=[
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "http://localhost:3000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8080",
+        "http://clinica.local:30640",
+        "http://clinica.local",
+        "https://clinica.local",
+        "http://dev.clinica.local",
+        "https://dev.clinica.local",
+        "http://test.clinica.local",
+        "https://test.clinica.local",
+    ],
+)
 
-ROOT_URLCONF = 'clinica_drf.urls'
+ROOT_URLCONF = "clinica_drf.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
         # Colocamos la ruta templates para los template de los correos que se enviaran.
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'clinica_drf.wsgi.application'
+WSGI_APPLICATION = "clinica_drf.wsgi.application"
 
 
 # Database
@@ -122,13 +148,13 @@ WSGI_APPLICATION = 'clinica_drf.wsgi.application'
 
 # Esta es la configuración para la BD PostgreSQL.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env("DB_PORT"),
     }
 }
 
@@ -137,16 +163,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -154,9 +180,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 # Esto es para tomar la fecha correspondiente de Chilito.
-TIME_ZONE = 'America/Santiago'
+TIME_ZONE = "America/Santiago"
 USE_TZ = True  # Habilita el soporte para zonas horarias
 
 USE_I18N = True
@@ -164,38 +190,38 @@ USE_I18N = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 # Esta es la ruta donde Django buscará archivos estáticos en desarrollo
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 # Esta es la línea que falta y que causa el error en la consola:
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'usuarios.CustomersUsers'
+AUTH_USER_MODEL = "usuarios.CustomersUsers"
 
 # Llamamos la variable de entorno para el GMAIL.
-EMAIL_BACKEND=env("EMAIL_BACKEND")
-EMAIL_HOST=env("EMAIL_HOST")
-EMAIL_PORT=env.int("EMAIL_PORT")
-EMAIL_USE_TLS=env.bool("EMAIL_USE_TLS")
-EMAIL_HOST_USER=env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD=env("EMAIL_HOST_PASSWORD")
+EMAIL_BACKEND = env("EMAIL_BACKEND")
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env.int("EMAIL_PORT")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 
 # Configuración de Django Rest Framework (DRF)
 # Este código siempre debe estar.
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ]
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
 }
 
 # Llamamos la llave SECRETA de STRIPE.
