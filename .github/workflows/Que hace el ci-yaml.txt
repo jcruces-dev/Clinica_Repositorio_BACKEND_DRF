@@ -1,0 +1,35 @@
+Flujo completo que ejecuta este workflow
+Tú creas un tag (ej: v1.0.1) y lo subes con git push origin v1.0.1.
+
+GitHub Actions detecta el tag y dispara el workflow.
+
+Job 1 (build-and-push):
+
+Descarga el código del backend.
+
+Se autentica en GHCR con el GITHUB_TOKEN.
+
+Construye la imagen Docker.
+
+La publica en GHCR con dos tags: v1.0.1 y el SHA del commit.
+
+Job 2 (update-manifest) (solo si el Job 1 terminó con éxito):
+
+Clona el repo de infraestructura usando el GH_PAT.
+
+Actualiza los manifiestos (Dev/backend/backend-deployment.yaml y Test/backend/backend-deployment.yaml) con el nuevo tag v1.0.1.
+
+Hace commit y push de esos cambios al repo de infraestructura.
+
+Tú solo haces git pull en el repo de infraestructura y kubectl apply para aplicar los cambios en el clúster.
+
+Puntos clave a entender
+Concepto	Explicación
+on: push: tags: 'v*'	Solo se ejecuta con tags que empiecen con v. No en cada push normal.
+needs: build-and-push	El Job 2 solo se ejecuta si el Job 1 terminó con éxito.
+${{ github.ref_name }}	El nombre del tag que disparó el workflow (ej: v1.0.1).
+${{ github.sha }}	El SHA del commit que disparó el workflow.
+secrets.GITHUB_TOKEN	Token automático para autenticarse en GHCR.
+secrets.GH_PAT	Tu PAT para hacer push al repo de infraestructura.
+sed -i	Comando que reemplaza texto en archivos.
+git diff --staged --quiet	Comprueba si hay cambios antes de hacer commit (evita commits vacíos).

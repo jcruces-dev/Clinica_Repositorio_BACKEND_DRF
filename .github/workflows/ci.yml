@@ -1,34 +1,47 @@
+# Nombre del workflow. Aparecerá en la pestaña "Actions" de GitHub.
+name: CI-Backend-Clinica-BP
+
 # Define CUÁNDO se ejecuta el workflow.
 on:
-  # Se ejecuta cuando se crea un tag que empieza con "v" (ej: v1.0.0, v1.1.0, v2.0.0)
+  # Se ejecuta cuando se crea un tag que empieza con "v" (ej: v1.0.0, v1.1.0).
+  # Esto permite versionar las imágenes de forma controlada.
   push:
     tags:
       - 'v*'
   # También permite ejecutarlo manualmente desde la pestaña Actions.
   workflow_dispatch:
 
-# Variables de entorno globales.
+# Variables de entorno globales para todo el workflow.
 env:
-  # Nombre de la imagen en GHCR.
+  # Nombre de la imagen en GHCR (GitHub Container Registry).
+  # Se usa luego con ${{ env.IMAGE_NAME }}.
   IMAGE_NAME: ghcr.io/jcruces-dev/backend-clinica-bp
 
 # Define los trabajos (jobs) que se ejecutarán.
 jobs:
-  # Job 1: Construir y publicar la imagen Docker.
+  # ==========================================================
+  # JOB 1: Construir y publicar la imagen Docker en GHCR.
+  # ==========================================================
   build-and-push:
+    # Nombre visible del job en la interfaz de GitHub Actions.
     name: Build and Push
+    # Sistema operativo de la máquina virtual donde correrá el job.
     runs-on: ubuntu-latest
     # Permisos necesarios para autenticarse en GHCR.
     permissions:
+      # Permiso para leer el contenido del repositorio.
       contents: read
+      # Permiso para escribir (publicar) paquetes en GHCR.
       packages: write
 
+    # Lista de pasos que se ejecutarán en orden dentro del job.
     steps:
-      # PASO 1: Descargar el código del repositorio.
+      # PASO 1: Descargar el código del repositorio en el runner.
       - name: Checkout código
         uses: actions/checkout@v4
 
       # PASO 2: Autenticarse en GHCR con el GITHUB_TOKEN automático.
+      # El GITHUB_TOKEN lo genera GitHub automáticamente en cada ejecución.
       - name: Login a GHCR
         uses: docker/login-action@v3
         with:
@@ -36,7 +49,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # PASO 3: Construir y publicar la imagen Docker con el tag de Git.
+      # PASO 3: Construir la imagen Docker y publicarla en GHCR.
       - name: Build y push
         uses: docker/build-push-action@v5
         with:
@@ -44,7 +57,54 @@ jobs:
           context: .
           # Publicar la imagen en GHCR.
           push: true
-          # Tags: uno con el tag de Git, otro con el SHA del commit.
+          # Tags: uno con el tag de Git (v1.0.0) y otro con el SHA del commit.
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  # ==========================================================
+  # JOB 2: Actualizar el manifiesto de Kubernetes en el repo de infraestructura.
+  # ==========================================================
+  update-manifest:
+    # Nombre visible del job.
+    name: Update K8s Manifest
+    # Sistema operativo del runner.
+    runs-on: ubuntu-latest
+    # Este job depende del job anterior. Solo se ejecuta si "build-and-push" terminó con éxito.
+    needs: build-and-push
+    steps:
+      # PASO 1: Clonar el repositorio de infraestructura donde están los manifiestos.
+      # Usa el PAT (GH_PAT) para tener permisos de escritura en ese repo.
+      - name: Checkout repo de infraestructura
+        uses: actions/checkout@v4
+        with:
+          # Repositorio a clonar.
+          repository: jcruces-dev/clinica-k8s-infrastructure
+          # Token de autenticación (el PAT que creaste).
+          token: ${{ secrets.GH_PAT }}
+          # Carpeta donde se clonará (dentro del runner).
+          path: infra
+
+      # PASO 2: Actualizar el tag de la imagen en los manifiestos con sed.
+      # Busca la línea "image: ghcr.io/.../backend-clinica-bp:ALGO" y la reemplaza por el nuevo tag.
+      - name: Actualizar imagen en los manifiestos
+        run: |
+          cd infra
+          # Actualizar el manifiesto del backend en Dev.
+          sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.ref_name }}|g" Dev/backend/backend-deployment.yaml
+          # Actualizar el manifiesto del backend en Test.
+          sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.ref_name }}|g" Test/backend/backend-deployment.yaml
+
+      # PASO 3: Hacer commit y push de los manifiestos actualizados.
+      - name: Commit y push
+        run: |
+          cd infra
+          # Configurar el usuario que hará el commit (el bot de GitHub Actions).
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Añadir los archivos modificados al staging.
+          git add Dev/backend/backend-deployment.yaml Test/backend/backend-deployment.yaml
+          # Hacer commit solo si hay cambios reales (evita commits vacíos).
+          git diff --staged --quiet || git commit -m "Update backend image to ${{ github.ref_name }}"
+          # Subir los cambios al repositorio de infraestructura.
+          git push
