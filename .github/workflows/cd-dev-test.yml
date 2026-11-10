@@ -1,0 +1,73 @@
+name: 2. CD - Deploy to Dev & Test
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ghcr.io/jcruces-dev/backend-clinica-bp
+
+jobs:
+  test:
+    # ... (Copia aquí exactamente el mismo Job 'test' del archivo 1) ...
+    name: Run Pytest
+    runs-on: ubuntu-latest
+    # [Pega aquí la configuración del servicio postgres y los steps del archivo 1]
+
+  build-and-push:
+    name: Build and Push (Dev/Test)
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      - name: Extraer metadatos
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=run-${{ github.run_number }}
+            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build y push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          target: production
+          tags: ${{ steps.meta.outputs.tags }}
+
+  update-dev-test:
+    name: Update Dev & Test Manifests
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo de infraestructura
+        uses: actions/checkout@v4
+        with:
+          repository: jcruces-dev/clinica-k8s-infrastructure
+          token: ${{ secrets.GH_PAT }}
+          path: infra
+      - name: Actualizar manifiestos
+        run: |
+          cd infra
+          DEPLOY_TAG="${{ github.sha }}"
+          find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${DEPLOY_TAG}|g" {} +
+      - name: Commit y push
+        run: |
+          cd infra
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Update Dev/Test image to ${{ github.sha }}"
+          git push
