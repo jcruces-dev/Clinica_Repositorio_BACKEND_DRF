@@ -75,18 +75,32 @@ jobs:
       # PASO 5: Ejecuta las pruebas con Pytest.
       - name: Ejecutar Pruebas
         env:
-          # 👇 AQUÍ ESTÁN LAS VARIABLES QUE FALTABAN 👇
-          # Le pasamos las credenciales de la base de datos temporal a Django.
+          # 👇 AQUÍ ESTÁN TODAS LAS VARIABLES DE TU .env (Con valores falsos para CI)
+          # Variables de Base de Datos
           DB_HOST: localhost
           DB_PORT: 5432
           POSTGRES_DB: clinica_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 1234
-          # Le pasamos la SECRET_KEY (falsa) para que Django no falle al arrancar.
+          
+          # Variables de Seguridad y Django
           SECRET_KEY: 'django-insecure-clave-falsa-solo-para-github-actions'
-          # Le decimos a Django que estamos en modo debug para las pruebas.
           DEBUG: 'True'
+          ALLOWED_HOSTS: '*'
+          CORS_ALLOWED_ORIGINS: 'http://localhost'
+          
+          # Variables de Correo (Falsas, no se enviarán correos reales en los tests)
+          EMAIL_BACKEND: 'django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_HOST: 'smtp.gmail.com'
+          EMAIL_PORT: '587'
+          EMAIL_USE_TLS: 'True'
+          EMAIL_HOST_USER: 'test@test.com'
+          EMAIL_HOST_PASSWORD: 'password-falso'
+          
+          # Variable de Stripe (Falsa, los pagos están mockeados)
+          STRIPE_SECRET_KEY: 'sk_test_clave_falsa_para_github_actions'
         run: |
+          # Ejecutamos Pytest apuntando a la configuración
           pytest -v -c Clinica_DRF/pytest.ini
 
   # ==========================================================
@@ -144,16 +158,20 @@ jobs:
       - name: Actualizar imagen en los manifiestos
         run: |
           cd infra
-          # Busca la imagen vieja y la reemplaza por el nuevo tag de versión.
+          # Busca la imagen vieja y la reemplaza por el nuevo tag de versión en Dev.
           sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.ref_name }}|g" Dev/backend/backend-deployment.yaml
+          # Busca la imagen vieja y la reemplaza por el nuevo tag de versión en Test.
           sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.ref_name }}|g" Test/backend/backend-deployment.yaml
 
       - name: Commit y push
         run: |
           cd infra
+          # Configurar el usuario que hará el commit (el bot de GitHub Actions).
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Añadir los archivos modificados al staging.
           git add Dev/backend/backend-deployment.yaml Test/backend/backend-deployment.yaml
-          # Hace el commit solo si realmente hubo cambios (evita errores si no cambió nada).
+          # Hacer commit solo si hay cambios reales (evita errores si no cambió nada).
           git diff --staged --quiet || git commit -m "Update backend image to ${{ github.ref_name }}"
+          # Subir los cambios al repositorio de infraestructura.
           git push
