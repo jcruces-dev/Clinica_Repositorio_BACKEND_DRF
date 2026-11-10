@@ -12,67 +12,78 @@ on:
   # 3. Se ejecuta cuando abres o actualizas un Pull Request hacia main.
   pull_request:
     branches: [ main ]
-  # 4. Permite ejecutarlo manualmente desde la pestaña Actions.
+  # 4. Permite ejecutarlo manualmente desde la pestaña Actions en GitHub.
   workflow_dispatch:
 
 # Variables de entorno globales para todo el workflow.
 env:
-  # Nombre base de la imagen en GHCR (GitHub Container Registry).
+  # Define el nombre base de la imagen en GitHub Container Registry (GHCR).
   IMAGE_NAME: ghcr.io/jcruces-dev/backend-clinica-bp
 
-# Define los trabajos (jobs) que se ejecutarán.
+# Define los trabajos (jobs) que se ejecutarán en secuencia.
 jobs:
   # ==========================================================
   # JOB 1: Pruebas Automatizadas (CI - Quality Gate)
   # ==========================================================
   test:
+    # Nombre visible del job en la interfaz de GitHub Actions.
     name: Run Pytest
+    # Sistema operativo de la máquina virtual (Ubuntu más reciente).
     runs-on: ubuntu-latest
     
-    # Levantamos una base de datos PostgreSQL temporal para las pruebas.
+    # Levantamos un contenedor de base de datos temporal para las pruebas.
     services:
       postgres:
+        # Imagen oficial de PostgreSQL versión 15.
         image: postgres:15
+        # Variables de entorno requeridas para inicializar la base de datos.
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 1234
           POSTGRES_DB: clinica_test
+        # Mapeo de puertos (host:contenedor) para conectar Django a la BD.
         ports:
           - 5432:5432
-        # Healthcheck para esperar a que la BD esté lista antes de correr los tests.
+        # Healthcheck: Verifica que PostgreSQL esté listo antes de ejecutar los tests.
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
+    # Pasos que se ejecutarán secuencialmente en este trabajo.
     steps:
-      # Descarga el código del repositorio en la máquina virtual.
+      # Paso 1: Descarga el código fuente del repositorio en la máquina virtual.
       - name: Checkout código
         uses: actions/checkout@v4
 
-      # Instala Python 3.13.
+      # Paso 2: Configura el entorno de Python en la máquina virtual.
       - name: Configurar Python 3.13
         uses: actions/setup-python@v5
         with:
+          # Especifica la versión exacta de Python.
           python-version: '3.13'
 
-      # Instala librerías del sistema necesarias para compilar psycopg2 (Postgres).
+      # Paso 3: Instala librerías del sistema operativo necesarias para compilar psycopg2.
       - name: Instalar dependencias del sistema
         run: |
+          # Actualiza la lista de paquetes de Ubuntu.
           sudo apt-get update
+          # Instala compiladores y librerías de desarrollo para PostgreSQL.
           sudo apt-get install -y build-essential libpq-dev python3-dev
 
-      # Instala las dependencias de Python (incluyendo Pytest y Mock).
+      # Paso 4: Instala las dependencias de Python.
       - name: Instalar dependencias Python
         run: |
+          # Actualiza pip a su última versión.
           python -m pip install --upgrade pip
+          # Instala las librerías del archivo requirements-dev.txt.
           pip install -r Clinica_DRF/requirements-dev.txt
 
-      # Ejecuta la suite de pruebas con Pytest.
+      # Paso 5: Ejecuta la suite de pruebas con Pytest.
       - name: Ejecutar Pruebas
         env:
-          # Inyectamos las variables de entorno necesarias para que Django arranque.
+          # Inyecta las variables de entorno necesarias para que Django arranque sin errores.
           DB_HOST: localhost
           DB_PORT: 5432
           POSTGRES_DB: clinica_test
@@ -90,29 +101,48 @@ jobs:
           EMAIL_HOST_PASSWORD: 'password-falso'
           STRIPE_SECRET_KEY: 'sk_test_clave_falsa_para_github_actions'
         run: |
+          # Ejecuta Pytest apuntando al archivo de configuración.
           pytest -v -c Clinica_DRF/pytest.ini
 
 
   # ==========================================================
-  # JOB 2: Construir y publicar la imagen Docker en GHCR.
+  # JOB 2: Construir y publicar la imagen Docker (Nivel Arquitecto)
   # ==========================================================
   build-and-push:
     name: Build and Push
     runs-on: ubuntu-latest
-    # Solo se ejecuta si el Job 1 (Pytest) pasa en verde.
+    # Dependencia: Solo se ejecuta si el Job 1 (test) pasa en verde.
     needs: test 
     
-    # Permisos necesarios para leer el repo y escribir en el registro de paquetes.
+    # Permisos necesarios para autenticarse en GHCR.
     permissions:
       contents: read
       packages: write
 
     steps:
-      # Descarga el código.
+      # Paso 1: Descarga el código fuente.
       - name: Checkout código
         uses: actions/checkout@v4
 
-      # Inicia sesión en GitHub Container Registry.
+      # Paso 2: Extrae metadatos para generar tags inteligentes automáticamente.
+      - name: Extraer metadatos (Tags y Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Define el nombre de la imagen base.
+          images: ${{ env.IMAGE_NAME }}
+          # Reglas de etiquetado: 
+          tags: |
+            # 1. Etiqueta con el SHA del commit (ideal para trazabilidad en PRs).
+            type=sha,format=long
+            # 2. Etiqueta con el número de ejecución (ej. run-10).
+            type=raw,value=run-${{ github.run_number }}
+            # 3. Etiqueta semántica si es un Tag de Git (ej. v1.0.0).
+            type=ref,event=tag
+            # 4. Etiqueta 'latest' si es un push a la rama main.
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Paso 3: Inicia sesión en GitHub Container Registry (GHCR).
       - name: Login a GHCR
         uses: docker/login-action@v3
         with:
@@ -120,30 +150,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Construye la imagen de la etapa 'production' y la sube a GHCR.
+      # Paso 4: Construye la imagen Docker usando la etapa 'production' y la sube.
       - name: Build y push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          # Usa la etapa 'production' de tu Dockerfile Multi-Etapa.
           target: production
-          # Usamos el SHA del commit y el número de ejecución como tags (sin barras).
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.IMAGE_NAME }}:run-${{ github.run_number }}
+          # Aplica los tags generados por la acción de metadatos.
+          tags: ${{ steps.meta.outputs.tags }}
+          # Aplica las etiquetas (labels) generadas por la acción de metadatos.
+          labels: ${{ steps.meta.outputs.labels }}
 
 
   # ==========================================================
-  # JOB 3: Actualizar el manifiesto de Kubernetes (GitOps)
+  # JOB 3: Actualizar manifiestos de Kubernetes (GitOps)
   # ==========================================================
   update-manifest:
     name: Update K8s Manifest
     runs-on: ubuntu-latest
-    # Solo se ejecuta si la imagen se construyó y subió correctamente.
+    # Dependencia: Solo se ejecuta si la imagen se construyó y subió con éxito.
     needs: build-and-push
     
     steps:
-      # Clona el repositorio de infraestructura usando el token GH_PAT.
+      # Paso 1: Clona el repositorio de infraestructura usando un Token (PAT).
       - name: Checkout repo de infraestructura
         uses: actions/checkout@v4
         with:
@@ -151,24 +182,32 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           path: infra
 
-      # Actualiza la imagen en los manifiestos YAML usando find y sed.
+      # Paso 2: Actualiza la imagen en todos los YAMLs de Kubernetes.
       - name: Actualizar imagen en los manifiestos
         run: |
+          # Entra a la carpeta del repositorio clonado.
           cd infra
-          # 👇 TRUCO MAESTRO: Busca en las carpetas Dev y Test cualquier archivo .yaml 
-          # y reemplaza la imagen por el SHA del commit. ¡No importa el nombre exacto del archivo!
-          find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.sha }}|g" {} +
+          # Define la versión a desplegar: Si es un tag (ej. v1.0.0) usa el tag, si no, usa el SHA.
+          DEPLOY_TAG="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          
+          # Busca todos los archivos .yaml en Dev y Test, y actualiza la línea de la imagen.
+          find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${DEPLOY_TAG}|g" {} +
 
-      # Hace commit y push de los archivos modificados.
+      # Paso 3: Hace commit y push de los cambios a la infraestructura.
       - name: Commit y push
         run: |
+          # Entra a la carpeta de infraestructura.
           cd infra
-          # Configura el usuario del bot.
+          # Define la versión a desplegar nuevamente (para el mensaje del commit).
+          DEPLOY_TAG="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          
+          # Configura el nombre del bot de GitHub Actions.
           git config user.name "github-actions[bot]"
+          # Configura el email del bot.
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # 👇 Añadimos TODOS los cambios. Si find modificó archivos, esto los atrapa a todos.
+          # Añade todos los archivos modificados al área de preparación (staging).
           git add .
-          # Solo hace commit si realmente hubo cambios en los archivos.
-          git diff --staged --quiet || git commit -m "Update backend image to ${{ github.sha }}"
-          # Empuja los cambios al repositorio.
+          # Hace commit solo si realmente hubo cambios en los archivos.
+          git diff --staged --quiet || git commit -m "Update backend image to ${DEPLOY_TAG}"
+          # Empuja los cambios al repositorio remoto de infraestructura.
           git push
