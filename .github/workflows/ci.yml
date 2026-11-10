@@ -151,13 +151,13 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           path: infra
 
-      # Actualiza la imagen en los manifiestos YAML usando sed.
+      # Actualiza la imagen en los manifiestos YAML usando find y sed.
       - name: Actualizar imagen en los manifiestos
         run: |
           cd infra
-          # 👇 CORRECCIÓN DE RUTAS: En Dev se llama 'backend-deployment.yaml' y en Test '02-backend-deployment.yaml'
-          sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.sha }}|g" Dev/backend/backend-deployment.yaml
-          sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.sha }}|g" Test/backend/02-backend-deployment.yaml
+          # 👇 TRUCO MAESTRO: Busca en las carpetas Dev y Test cualquier archivo .yaml 
+          # y reemplaza la imagen por el SHA del commit. ¡No importa el nombre exacto del archivo!
+          find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${{ github.sha }}|g" {} +
 
       # Hace commit y push de los archivos modificados.
       - name: Commit y push
@@ -166,8 +166,8 @@ jobs:
           # Configura el usuario del bot.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # 👇 CORRECCIÓN: Añadimos exactamente las rutas que modificamos arriba.
-          git add Dev/backend/backend-deployment.yaml Test/backend/02-backend-deployment.yaml
+          # 👇 Añadimos TODOS los cambios. Si find modificó archivos, esto los atrapa a todos.
+          git add .
           # Solo hace commit si realmente hubo cambios en los archivos.
           git diff --staged --quiet || git commit -m "Update backend image to ${{ github.sha }}"
           # Empuja los cambios al repositorio.
