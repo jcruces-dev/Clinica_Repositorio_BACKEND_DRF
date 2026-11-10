@@ -35,3 +35,8 @@ Thumbs.db
 
 # Docker
 *.pid
+
+# Coverage. Test y el HTML con la info del Test, no se sube al repositorio.
+htmlcov/
+.pytest_cache/
+.coverage
