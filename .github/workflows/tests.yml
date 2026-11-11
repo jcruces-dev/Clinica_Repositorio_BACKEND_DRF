@@ -9,6 +9,8 @@ jobs:
   run-tests:
     name: Run Pytest
     runs-on: ubuntu-latest
+    
+    # Levantamos la base de datos PostgreSQL temporal
     services:
       postgres:
         image: postgres:15
@@ -23,21 +25,43 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     steps:
+      # Descarga el código del repositorio
       - name: Checkout código
         uses: actions/checkout@v4
+        
+      # Configura el entorno de Python
       - name: Configurar Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          
+      # Instala las librerías del sistema operativo
       - name: Instalar dependencias del sistema
         run: |
+          # 🛠️ FIX INFRAESTRUCTURA: GitHub a veces falla resolviendo su propio espejo de Azure.
+          # Reemplazamos la URL de Azure por la oficial de Ubuntu en los archivos de apt.
+          # Usamos '|| true' para que no falle si el archivo no existe en esa versión de Ubuntu.
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/apt-mirrors.txt || true
+          
+          # Actualiza la lista de paquetes usando los servidores oficiales
           sudo apt-get update
+          
+          # Instala compiladores y librerías para PostgreSQL
           sudo apt-get install -y build-essential libpq-dev python3-dev
+          
+      # Instala las dependencias de Python
       - name: Instalar dependencias Python
         run: |
+          # Actualiza pip
           python -m pip install --upgrade pip
+          # Instala las librerías del proyecto (Pytest, Mock, etc.)
           pip install -r Clinica_DRF/requirements-dev.txt
+          
+      # Ejecuta la suite de pruebas con las variables de entorno
       - name: Ejecutar Pruebas
         env:
           DB_HOST: localhost
@@ -57,4 +81,5 @@ jobs:
           EMAIL_HOST_PASSWORD: 'password-falso'
           STRIPE_SECRET_KEY: 'sk_test_clave_falsa'
         run: |
+          # Corre Pytest apuntando a la configuración
           pytest -v -c Clinica_DRF/pytest.ini
