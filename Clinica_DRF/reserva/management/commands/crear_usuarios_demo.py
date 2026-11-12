@@ -9,7 +9,7 @@ from doctor.models import DoctorModel
 from secretaria.models import SecretariaModel
 from paciente.models import PacienteModel
 from comuna_clinica.models import ComunaClinicaModel
-from faker import Faker
+import random
 
 
 # Utilizamos la clase BaseCommand para crear un comando personalizado de Django que permita crear usuarios de prueba de manera segura.
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             self.style.WARNING("🚀 Iniciando creación de usuarios demo...")
         )
         # Inicializamos Faker para generar datos aleatorios en español (Chile).
-        fake = Faker("es_CL")
+        # fake = Faker("es_CL")
 
         # Creamos los grupos si no existen.
         grupo_doctor, _ = Group.objects.get_or_create(name="Doctor")
@@ -74,7 +74,7 @@ class Command(BaseCommand):
                 edad=45,
                 sexo="M",
                 rut="75.555.812-5",
-                fono=f"+56 9{fake.random_int(min=10000000, max=99999999)}",
+                fono=f"+569{random.randint(10000000, 99999999)}",
                 doctor_uuid=str(uuid.uuid4()),
             )
             # Asociamos el doctor a la clínica utilizando la relación (ManyToMany).
@@ -96,7 +96,7 @@ class Command(BaseCommand):
                 edad=45,
                 sexo="F",
                 rut="77.183.814-6",
-                fono=f"+56 9{fake.random_int(min=10000000, max=99999999)}",
+                fono=f"+569{random.randint(10000000, 99999999)}",
                 secretaria_uuid=str(uuid.uuid4()),
                 fk_user=user_sec,
             )
@@ -122,7 +122,7 @@ class Command(BaseCommand):
                 edad=35,
                 sexo="M",
                 rut="92.272.361-3",
-                fono=f"+56 9{fake.random_int(min=10000000, max=99999999)}",
+                fono=f"+569{random.randint(10000000, 99999999)}",
                 paciente_uuid=str(uuid.uuid4()),
             )
 
