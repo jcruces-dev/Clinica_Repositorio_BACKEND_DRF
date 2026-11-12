@@ -59,7 +59,7 @@ jobs:
           
       # Paso 3: Construye la imagen y le pone el tag semántico (ej. v1.0.0).
       - name: Build y push (Versión Semántica)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
