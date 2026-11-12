@@ -53,7 +53,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            # Etiqueta con el ID del commit (SHA).
+            # Etiqueta con el ID del commit (SHA). (Genera el tag con prefijo 'sha-', ej: sha-abc1234)
             type=sha,format=long
             # Etiqueta con el número de ejecución del pipeline.
             type=raw,value=run-${{ github.run_number }}
@@ -105,8 +105,11 @@ jobs:
         run: |
           # Entra a la carpeta del repositorio de infraestructura clonado.
           cd infra
-          # Define la versión a desplegar (usa el SHA del commit).
-          DEPLOY_TAG="${{ github.sha }}"
+          
+          # Agregamos el prefijo "sha-" para que coincida con la imagen real.
+          # Con esto aseguramos que encuentre la imagen en GHCR.
+          DEPLOY_TAG="sha-${{ github.sha }}"
+          
           # Busca dinámicamente todos los archivos .yaml en Dev y Test y actualiza la imagen.
           find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${DEPLOY_TAG}|g" {} +
           
@@ -122,6 +125,7 @@ jobs:
           # Prepara todos los archivos modificados.
           git add .
           # Hace el commit solo si hubo cambios reales (evita errores).
-          git diff --staged --quiet || git commit -m "Update Dev/Test image to ${{ github.sha }}"
+          # También actualizamos el mensaje del commit para que sea consistente.
+          git diff --staged --quiet || git commit -m "Update Dev/Test image to sha-${{ github.sha }}"
           # Empuja los cambios al repositorio de infraestructura.
           git push
