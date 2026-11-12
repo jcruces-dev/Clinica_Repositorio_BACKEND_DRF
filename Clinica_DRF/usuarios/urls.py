@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     path("login/", views.login, name="login"),
     path(
-        "api/usuario/registrar_usuario/",
+        "usuario/registrar_usuario/",
         views.registrar_usuario,
         name="registrar_usuario",
     ),
@@ -15,7 +15,7 @@ urlpatterns = [
     # path('usuario/borrar_esp_doctor/<int:id>/', views.borrar_esp_doctor, name='borrar_esp_doctor'),
     # path('usuario/borrar_doctor/<int:id>/', views.borrar_doctor, name='borrar_doctor'),
     path(
-        "api/usuario/listar_doctor_index/",
+        "usuario/listar_doctor_index/",
         views.listar_doctor_index,
         name="listar_doctor_index",
     ),
@@ -33,11 +33,11 @@ urlpatterns = [
     # -------------------- Fin Panel Admin Módulo Secretaria. ---------------------------------------------
     # -------------------- Inicio Panel Cardiologia Admin. ------------------------------------------------
     path(
-        "api/cardiologia/listar_info_cardiologia/",
+        "cardiologia/listar_info_cardiologia/",
         views.listar_info_cardiologia,
         name="listar_info_cardiologia",
     ),
     # -------------------- Fin Inicio Panel Cardiologia Admin. --------------------------------------------
     # ----------------- Cerrar Sessión. -------------------------------------------------------------------
-    path("api/usuario/cerrar_sesion/", views.cerrar_sesion, name="cerrar_sesion"),
+    path("usuario/cerrar_sesion/", views.cerrar_sesion, name="cerrar_sesion"),
 ]
