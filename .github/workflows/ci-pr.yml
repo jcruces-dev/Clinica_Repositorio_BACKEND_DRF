@@ -1,0 +1,23 @@
+# Nombre del workflow. Aparecerá en la pestaña "Actions" de GitHub.
+name: 1. CI - Quality Gate (PRs)
+
+# Define CUÁNDO se ejecuta este workflow.
+on:
+  # Se ejecuta automáticamente cuando se abre, reabre o actualiza un Pull Request hacia la rama main.
+  pull_request:
+    branches: [ main ]
+  # Permite ejecutar el workflow manualmente desde la interfaz de GitHub.
+  workflow_dispatch:
+
+# Define los trabajos (jobs) que se ejecutarán.
+jobs:
+  # ==========================================================
+  # JOB 1: Llamada al Workflow Reutilizable de Pruebas
+  # ==========================================================
+  tests:
+    # 👇 LA MAGIA DE LOS REUSABLE WORKFLOWS 👇
+    # En lugar de tener 50 líneas de código para levantar PostgreSQL, instalar Python y correr Pytest,
+    # simplemente llamamos al archivo 'tests.yml' que contiene toda esa lógica.
+    # Al hacer esto, si mañana agregamos una nueva variable de entorno a los tests, solo la cambiamos en 'tests.yml'
+    # y se actualizará automáticamente aquí.
+    uses: ./.github/workflows/tests.yml

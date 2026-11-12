@@ -1,0 +1,14 @@
+[ Desarrollador abre un PR ] 
+      │
+      ▼
+🛡️ ci-pr.yml ──> Llama a ──> 🧪 tests.yml (16 tests)
+      │
+      ▼ (Si todo está ✅, se hace el Merge a main)
+[ Desarrollador crea un TAG (v1.0.0) ]             [ Merge en main ]
+      │                                                   │
+      ▼                                                   ▼
+🏭 release-prod.yml ──> Llama a ──> 🧪 tests.yml    🚀 cd-dev-test.yml ──> Llama a ──> 🧪 tests.yml
+      │                                                   │
+      ▼ (Crea imagen v1.0.0)                              ▼ (Crea imagen latest)
+      │                                                   │
+      └──> Actualiza carpetas Prod/ (¡Aprobación Manual!) └──> Actualiza carpetas Dev/ y Test/

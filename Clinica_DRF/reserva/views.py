@@ -1,10 +1,16 @@
 import email
 
 from django.shortcuts import render
+
 # Validador de rut.
 from reserva import validar_rut
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import authentication_classes, permission_classes, api_view
+from rest_framework.decorators import (
+    authentication_classes,
+    permission_classes,
+    api_view,
+)
+
 # Hashear la Pass.
 from django.contrib.auth.hashers import make_password
 from usuarios.models import CustomersUsers
@@ -13,6 +19,7 @@ from especialidad.models import Especialidad
 from especialidad.serializers import EspecialidadSerializers
 from comuna_clinica.models import ComunaClinicaModel
 from comuna_clinica.serializers import ComunaClinicaSerializer
+
 #
 from paciente_no_registrado.models import PacienteNoRegisterModel
 from paciente_no_registrado.serializers import PacienteNoRegisterSerializer
@@ -24,8 +31,10 @@ from historial_clinico.models import HistorialClinicoModel
 from historial_clinico.serializers import HistorialClinicoSerializer
 from descuento.models import DescuentoPaciente
 from descuento.desc_paciente_serializers import DescuentoPacienteSerializer
+
 # Crear un código de Venta.
 import uuid
+
 # Importamos el status.
 from rest_framework import status
 from .models import ReservaModel
@@ -38,49 +47,64 @@ from descuento.models import DescuentoModel
 from django.http import JsonResponse, HttpResponse
 from rest_framework.response import Response
 from django.contrib.auth.models import Group
+
 # Obtenemos la Fecha de Hoy.
 from datetime import date, datetime
 import pytz
+
 # Crear la Carpeta de los PDF que se enviarán por Correo. ------------------
 import os
+
 # render_to_string; Sirve para enviar el HTML del correo.-------------------
 from django.template.loader import render_to_string
+
 # Mensaje del E-mail.
 from django.core.mail import EmailMessage
+
 #
 from django.conf import settings
-#----- Librería para crear PDF -------------------------------------------------
+
+# ----- Librería para crear PDF -------------------------------------------------
 import pdfkit
-#----- Fin Librería para crear PDF ---------------------------------------------
+
+# ----- Fin Librería para crear PDF ---------------------------------------------
 #
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
+
 # Librería STRIPE.
 import stripe
+
 # Fin STRIPE.
 
+
 # Create your views here.
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def listar_clinica_index(request):
     try:
         clinica = ComunaClinicaModel.objects.all()
         arr = []
         for cli in clinica:
-            arr.append({
-                'id': cli.id,
-                'nombre_clinica': cli.nombre_clinica,
-                'comuna_clinica': cli.comuna_clinica,
-                'direccion_clinica': cli.direccion_clinica
-            })
-        return Response({'list_clinica':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+            arr.append(
+                {
+                    "id": cli.id,
+                    "nombre_clinica": cli.nombre_clinica,
+                    "comuna_clinica": cli.comuna_clinica,
+                    "direccion_clinica": cli.direccion_clinica,
+                }
+            )
+        return Response(
+            {"list_clinica": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def listar_esp_index(request, id):
     try:
@@ -90,19 +114,24 @@ def listar_esp_index(request, id):
         doctores = clinica.doctormodel_set.all()
         print(doctores)
         # Obtenemos todas las especialidades de esos doctores
-        especialidades = Especialidad.objects.filter(doctormodel__in=doctores).distinct()
+        especialidades = Especialidad.objects.filter(
+            doctormodel__in=doctores
+        ).distinct()
         print(especialidades)
         # Obtener el grupo por nombre
         especialidad_Serializers = EspecialidadSerializers(especialidades, many=True)
-        return Response({'especialidad':especialidad_Serializers.data},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+        return Response(
+            {"especialidad": especialidad_Serializers.data},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def listar_doc_index(request, id_clinica, id_especialidad):
     try:
@@ -124,30 +153,36 @@ def listar_doc_index(request, id_clinica, id_especialidad):
         especialidad = Especialidad.objects.get(pk=id_especialidad)
         # Filtramos doctores que estén en esa clínica y tengan esa especialidad
         doctores = DoctorModel.objects.filter(
-            doctor_clinica=clinica,
-            especialidades=especialidad
-        ).select_related('fk_user')  # Para acceder al usuario sin hacer muchas queries
+            doctor_clinica=clinica, especialidades=especialidad
+        ).select_related(
+            "fk_user"
+        )  # Para acceder al usuario sin hacer muchas queries
         arr = []
         # Armamos la lista de nombres completos desde fk_user
         for doctor in doctores:
             user = doctor.fk_user
-            arr.append({
-                'id_doctor': doctor.id,
-                'primer_nombre': doctor.primer_nombre,
-                'segundo_nombre': doctor.segundo_nombre,
-                'ap_paterno': doctor.ap_paterno,
-                'ap_materno': doctor.ap_materno,
-            })
+            arr.append(
+                {
+                    "id_doctor": doctor.id,
+                    "primer_nombre": doctor.primer_nombre,
+                    "segundo_nombre": doctor.segundo_nombre,
+                    "ap_paterno": doctor.ap_paterno,
+                    "ap_materno": doctor.ap_materno,
+                }
+            )
         #
-        return Response({'doctores':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+        return Response(
+            {"doctores": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 # Datos para full Callendar.
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def reserva_paciente_index(request):
     try:
@@ -165,15 +200,30 @@ def reserva_paciente_index(request):
         fono = str(data.get("fono"))
         # Validar la cantidad de caracteres del fono, deben ser 9 digitos y solo números.
         if not fono or not fono.isdigit() or len(fono) != 9:
-            return Response({'error': 7}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 7}, status=status.HTTP_400_BAD_REQUEST)
         sexo = data.get("sexo")
         rut = data.get("rut")
         validar = validar_rut.validar_rut(rut)
         if not validar:
-            return Response({'error': 6}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 6}, status=status.HTTP_400_BAD_REQUEST)
         # Validamos que ls datos no se encuentre vacíos.
-        if not all([id_clinica, id_especialidad, id_doctor, primer_nombre, segundo_nombre, ap_paterno, ap_materno, email, edad, fono, rut, sexo]):
-            return Response({'error': 0}, status=status.HTTP_400_BAD_REQUEST)
+        if not all(
+            [
+                id_clinica,
+                id_especialidad,
+                id_doctor,
+                primer_nombre,
+                segundo_nombre,
+                ap_paterno,
+                ap_materno,
+                email,
+                edad,
+                fono,
+                rut,
+                sexo,
+            ]
+        ):
+            return Response({"error": 0}, status=status.HTTP_400_BAD_REQUEST)
         # Nombre de la Clínica.
         clinica = ComunaClinicaModel.objects.get(pk=id_clinica)
         nombre_clinica = clinica.nombre_clinica
@@ -184,29 +234,41 @@ def reserva_paciente_index(request):
         nombre_especialidad = especialidad.nombre_especialidad
         # DOCTOR.
         doctor = DoctorModel.objects.get(pk=id_doctor)
-        nombre_doctor = doctor.primer_nombre + " " + doctor.segundo_nombre + " " + doctor.ap_paterno + " " + doctor.ap_materno
+        nombre_doctor = (
+            doctor.primer_nombre
+            + " "
+            + doctor.segundo_nombre
+            + " "
+            + doctor.ap_paterno
+            + " "
+            + doctor.ap_materno
+        )
         # Filtración de las Reservas.
-        reserva = ReservaModel.objects.filter(nombre_doctor=nombre_doctor, especialidad=nombre_especialidad, nombre_clinica=nombre_clinica)
+        reserva = ReservaModel.objects.filter(
+            nombre_doctor=nombre_doctor,
+            especialidad=nombre_especialidad,
+            nombre_clinica=nombre_clinica,
+        )
         # Array.
         arr = []
         for res in reserva:
             # Validar fecha
             if res.fecha_reserva:
-                fecha = res.fecha_reserva.strftime('%Y-%m-%d')
+                fecha = res.fecha_reserva.strftime("%Y-%m-%d")
             else:
                 fecha = None
                 print(f"Advertencia: Reserva {res.id} sin fecha")
 
             # Validar hora inicio
             if res.hora_inicio:
-                hora_inicio = res.hora_inicio.strftime('%H:%M:%S')
+                hora_inicio = res.hora_inicio.strftime("%H:%M:%S")
             else:
                 hora_inicio = None
                 print(f"Advertencia: Reserva {res.id} sin hora inicio")
 
             # Validar hora término
             if res.hora_termino:
-                hora_termino = res.hora_termino.strftime('%H:%M:%S')
+                hora_termino = res.hora_termino.strftime("%H:%M:%S")
             else:
                 hora_termino = None
                 print(f"Advertencia: Reserva {res.id} sin hora término")
@@ -220,26 +282,31 @@ def reserva_paciente_index(request):
                 print(f"Reserva {res.id} omitida del calendario por datos incompletos")
                 continue  # Saltar esta reserva
 
-            arr.append({
-                'id_reserva': res.id,
-                'nombre_doctor': res.nombre_doctor,
-                'title': res.especialidad,
-                'nombre_clinica': res.nombre_clinica,
-                'start': start,
-                'end': end,
-                'direccion_clinica': direccion_clinica,
-                'comuna_clinica': comuna_clinica,
-                'fecha_reserva': res.fecha_reserva,
-            })
-        return Response({'reserva':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+            arr.append(
+                {
+                    "id_reserva": res.id,
+                    "nombre_doctor": res.nombre_doctor,
+                    "title": res.especialidad,
+                    "nombre_clinica": res.nombre_clinica,
+                    "start": start,
+                    "end": end,
+                    "direccion_clinica": direccion_clinica,
+                    "comuna_clinica": comuna_clinica,
+                    "fecha_reserva": res.fecha_reserva,
+                }
+            )
+        return Response(
+            {"reserva": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def pago_stripe_reserva_index(request):
     try:
@@ -252,11 +319,11 @@ def pago_stripe_reserva_index(request):
         ap_materno = data.get("ap_materno")
         # Capturamos la hora actual donde se realizó la reserva.
         # Zona horaria de Chile
-        chile_tz = pytz.timezone('Chile/Continental')
+        chile_tz = pytz.timezone("Chile/Continental")
         # Fecha y hora actual en Chile
         fecha_actual_chile = datetime.now(chile_tz)
         # Mostrar en el formato deseado
-        print(fecha_actual_chile.strftime('%Y-%m-%d %H:%M:%S.%f'))
+        print(fecha_actual_chile.strftime("%Y-%m-%d %H:%M:%S.%f"))
         nombre_paciente = data.get("nombre_paciente")
         email = data.get("email")
         edad = data.get("edad")
@@ -264,13 +331,13 @@ def pago_stripe_reserva_index(request):
         fono = data.get("fono")
         # Validar la cantidad de caracteres del fono, deben ser 9 digitos y solo números.
         if not fono or not fono.isdigit() or len(fono) != 9:
-            return Response({'error': 7}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 7}, status=status.HTTP_400_BAD_REQUEST)
         fono = f"+56{fono}"
         rut = data.get("rut")
         validar = validar_rut.validar_rut(rut)
         print(validar)
         if not validar:
-            return Response({'error': 6}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 6}, status=status.HTTP_400_BAD_REQUEST)
         especialidad = data.get("especialidad")
         valor_esp = Especialidad.objects.get(nombre_especialidad=especialidad)
         #
@@ -294,10 +361,16 @@ def pago_stripe_reserva_index(request):
         deb = []
         arr = []
         # Verificar si existe reserva el mismo dia yh la misma hora, el mismo doctor, la misma especialidad, etc.
-        veri_res = ReservaModel.objects.filter(fecha_reserva= fecha_reserva_formateada, hora_inicio= hora_inicio,nombre_doctor=nombre_doctor, especialidad=especialidad, nombre_clinica=nombre_clinica)
+        veri_res = ReservaModel.objects.filter(
+            fecha_reserva=fecha_reserva_formateada,
+            hora_inicio=hora_inicio,
+            nombre_doctor=nombre_doctor,
+            especialidad=especialidad,
+            nombre_clinica=nombre_clinica,
+        )
         if veri_res.exists():
-            return Response({'error': 8}, status=status.HTTP_400_BAD_REQUEST)
-        #----------------------------------------------------------------------------------
+            return Response({"error": 8}, status=status.HTTP_400_BAD_REQUEST)
+        # ----------------------------------------------------------------------------------
         # 5. OBTENER EL MONTO DE LA ESPECIALIDAD
         # Stripe recibe montos enteros. Para CLP (Pesos Chilenos) no se usan decimales.
         monto_pago = int(valor_esp.valor_especialidad)
@@ -306,33 +379,33 @@ def pago_stripe_reserva_index(request):
         print("Intento de Pago STRIPE.")
         intento_pago = stripe.PaymentIntent.create(
             amount=monto_pago,
-            currency='clp',
-            payment_method_types=['card'],  # Acepta tarjetas de débito y crédito
+            currency="clp",
+            payment_method_types=["card"],  # Acepta tarjetas de débito y crédito
             metadata={
-                'proyecto': 'BuenPaciente',
-                'rut_paciente': rut,
-                'email_paciente': email,
-                'doctor': nombre_doctor,
-                'especialidad': especialidad,
-                'fecha_reserva': fecha_reserva_formateada,
-                'hora_inicio': hora_inicio
-            }
+                "proyecto": "BuenPaciente",
+                "rut_paciente": rut,
+                "email_paciente": email,
+                "doctor": nombre_doctor,
+                "especialidad": especialidad,
+                "fecha_reserva": fecha_reserva_formateada,
+                "hora_inicio": hora_inicio,
+            },
         )
-        #----------------------------------------------------------------------------------
+        # ----------------------------------------------------------------------------------
         # Datos para el Full Calendar.
         full_calendar = []
         # Crear el paciente no registrado usando el serializer
         pac_data = {
-            'primer_nombre': primer_nombre,
-            'segundo_nombre': segundo_nombre,
-            'ap_paterno': ap_paterno,
-            'ap_materno': ap_materno,
-            'edad': edad,
-            'sexo': sexo,
-            'rut': rut,
-            'fono': fono,
-            'email': email,
-            'paciente_uuid': pac_no_register_uuid,
+            "primer_nombre": primer_nombre,
+            "segundo_nombre": segundo_nombre,
+            "ap_paterno": ap_paterno,
+            "ap_materno": ap_materno,
+            "edad": edad,
+            "sexo": sexo,
+            "rut": rut,
+            "fono": fono,
+            "email": email,
+            "paciente_uuid": pac_no_register_uuid,
         }
         #
         pac_no_register_serializers = PacienteNoRegisterSerializer(data=pac_data)
@@ -340,39 +413,44 @@ def pago_stripe_reserva_index(request):
             pac_no_register = pac_no_register_serializers.save()
             # Crear la reserva
             arr = {
-                'fecha_creacion_reserva':fecha_actual_chile,
-                'usuario_creacion_reserva':nombre_paciente,
-                'fecha_reserva':fecha_reserva_formateada,
-                'hora_inicio':hora_inicio,
-                'hora_termino':hora_termino,
-                'especialidad':especialidad,
-                'nombre_doctor':nombre_doctor,
-                'tipo_pago': None,
-                'reserva_uuid': reserva_uuid,
-                'nombre_clinica':nombre_clinica,
-                'direccion_clinica':direccion_clinica,
-                'comuna_clinica':comuna_clinica,
-                'pago_realizado': None,
-                'fk_pac_no_register':pac_no_register.id,
+                "fecha_creacion_reserva": fecha_actual_chile,
+                "usuario_creacion_reserva": nombre_paciente,
+                "fecha_reserva": fecha_reserva_formateada,
+                "hora_inicio": hora_inicio,
+                "hora_termino": hora_termino,
+                "especialidad": especialidad,
+                "nombre_doctor": nombre_doctor,
+                "tipo_pago": None,
+                "reserva_uuid": reserva_uuid,
+                "nombre_clinica": nombre_clinica,
+                "direccion_clinica": direccion_clinica,
+                "comuna_clinica": comuna_clinica,
+                "pago_realizado": None,
+                "fk_pac_no_register": pac_no_register.id,
             }
             #
             reserva = ReservaSerializer(data=arr)
             print("Pago Aceptado por STRIPE.")
             if reserva.is_valid():
                 res = reserva.save()
-                return Response({'reserva_uuid': reserva_uuid,'clientSecret': intento_pago.client_secret},
-                                    # Específicamos el status.
-                                    status=status.HTTP_200_OK)
+                return Response(
+                    {
+                        "reserva_uuid": reserva_uuid,
+                        "clientSecret": intento_pago.client_secret,
+                    },
+                    # Específicamos el status.
+                    status=status.HTTP_200_OK,
+                )
 
         else:
             print(pac_no_register_serializers.errors)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
 
 
 # Respuesta exitosa luego del pago, aca obtenemos la información del tipo de tarjeta y si trae cuotas.
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def confirmar_pago_stripe_exitoso(request):
     try:
@@ -386,77 +464,87 @@ def confirmar_pago_stripe_exitoso(request):
             # Pasamos el id de la transacción para obtener la información a detalle.
             stripe_payment_id,
             # Esto obliga a traer los detalles de la tarjeta en la raíz.
-            expand=['payment_method']  
+            expand=["payment_method"],
         )
         # Obtenemos el listado y lo pasamos a diccionario.
         pago_stripe = pago_stripe_obj.to_dict()
 
         # NUEVA RUTA DE LECTURA (Limpia y directa gracias al expand)
         # Al expandir 'payment_method', los datos de la tarjeta quedan disponibles directamente ahí.
-        metodo_pago_objeto = pago_stripe.get('payment_method', {}) or {}
+        metodo_pago_objeto = pago_stripe.get("payment_method", {}) or {}
         print("Pago Realizado 3")
         # Si por alguna razón se guardó en el historial clásico, dejamos tu validador de respaldo
-        if isinstance(metodo_pago_objeto, dict) and 'card' in metodo_pago_objeto:
-            tarjeta_info = metodo_pago_objeto.get('card', {}) or {}
+        if isinstance(metodo_pago_objeto, dict) and "card" in metodo_pago_objeto:
+            tarjeta_info = metodo_pago_objeto.get("card", {}) or {}
 
         # Si no se encontró, buscar en la raíz de 'payment_method_details'
-        if not tarjeta_info or tarjeta_info.get('funding', 'unknown') == 'unknown':
-            detalles_pago = pago_stripe.get('payment_method_details', {}) or {}
-            tarjeta_info = detalles_pago.get('card', {}) or {}
+        if not tarjeta_info or tarjeta_info.get("funding", "unknown") == "unknown":
+            detalles_pago = pago_stripe.get("payment_method_details", {}) or {}
+            tarjeta_info = detalles_pago.get("card", {}) or {}
 
         # (La más segura para modo Test): Buscar directo en el historial de cargos ('charges')
         # En entornos de prueba, Stripe suele poblar el objeto del cargo con el desglose de la tarjeta usada
-        if not tarjeta_info or tarjeta_info.get('funding', 'unknown') == 'unknown':
-            cargos = pago_stripe.get('charges', {}).get('data', []) or []
+        if not tarjeta_info or tarjeta_info.get("funding", "unknown") == "unknown":
+            cargos = pago_stripe.get("charges", {}).get("data", []) or []
             if cargos:
                 # Primero intentamos obtenerlo de los detalles del método de pago del cargo
-                detalles_cargo = cargos[0].get('payment_method_details', {}) or {}
-                tarjeta_info = detalles_cargo.get('card', {}) or {}
-                
+                detalles_cargo = cargos[0].get("payment_method_details", {}) or {}
+                tarjeta_info = detalles_cargo.get("card", {}) or {}
+
                 # Si sigue sin estar, buscamos la propiedad 'card' directa en el objeto del cargo (si existiera)
-                if not tarjeta_info or tarjeta_info.get('funding', 'unknown') == 'unknown':
-                    tarjeta_info = cargos[0].get('card', {}) or {}
+                if (
+                    not tarjeta_info
+                    or tarjeta_info.get("funding", "unknown") == "unknown"
+                ):
+                    tarjeta_info = cargos[0].get("card", {}) or {}
 
         # Una vez localizada la tarjeta por cualquiera de las 3 rutas, extraemos los datos
         if tarjeta_info:
-            installments_info = tarjeta_info.get('installments', {}) or {}
-            tipo_tarjeta = tarjeta_info.get('funding', 'unknown')
+            installments_info = tarjeta_info.get("installments", {}) or {}
+            tipo_tarjeta = tarjeta_info.get("funding", "unknown")
         else:
-            tipo_tarjeta = 'unknown'
+            tipo_tarjeta = "unknown"
 
         # Obtenemos las cuotas reales (si no hay, por defecto es 1)
-        cuotas = installments_info.get('count', 1) if isinstance(installments_info, dict) else 1
-        
+        cuotas = (
+            installments_info.get("count", 1)
+            if isinstance(installments_info, dict)
+            else 1
+        )
+
         #  Debe aparecer 'credit' o 'debit'
         print(f"--> [DEBUG STRIPE FUNCIONANDO] Transacción Realizada con éxito.")
 
         # Validación perfecta para la Base de Datos.
         # 1 representa Crédito
         # if tipo_tarjeta == 'credit':
-            
+
         #     es_debito_o_credito = 1
         #     glosa_pago = "Crédito"
         #     print("Resultado: Crédito")
         # else:
-            # 0 representa Débito
-            # es_debito_o_credito = 0
-            # glosa_pago = "Débito"
-            # print("Resultado: Débito")
+        # 0 representa Débito
+        # es_debito_o_credito = 0
+        # glosa_pago = "Débito"
+        # print("Resultado: Débito")
         # Buscamos la reserva que dejamos guardada como pendiente
         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
         # Ahora sí está pagada, ACTUALIZAMOS.
-        reserva.pago_realizado = 1 
+        reserva.pago_realizado = 1
         reserva.save()
-        
+
         # Enviamos el correo de confirmación
-        #generar_correo_reserv_index(reserva_uuid, "0")
-        
-        return Response({'status': 'ok', 'mensaje': 'Reserva confirmada con éxito'}, status=200)
+        # generar_correo_reserv_index(reserva_uuid, "0")
+
+        return Response(
+            {"status": "ok", "mensaje": "Reserva confirmada con éxito"}, status=200
+        )
     except ReservaModel.DoesNotExist:
-        return Response({'error': 'Reserva no encontrada'}, status=404)
+        return Response({"error": "Reserva no encontrada"}, status=404)
+
 
 # Pago reserva desde el index solo DÉBITO, paciente registrado y no registrado.
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def pago_credito_reserva_index(request):
     try:
@@ -468,11 +556,11 @@ def pago_credito_reserva_index(request):
         ap_materno = data.get("ap_materno")
         # Capturamos la hora actual donde se realizó la reserva.
         # Zona horaria de Chile
-        chile_tz = pytz.timezone('Chile/Continental')
+        chile_tz = pytz.timezone("Chile/Continental")
         # Fecha y hora actual en Chile
         fecha_actual_chile = datetime.now(chile_tz)
         # Mostrar en el formato deseado
-        print(fecha_actual_chile.strftime('%Y-%m-%d %H:%M:%S.%f'))
+        print(fecha_actual_chile.strftime("%Y-%m-%d %H:%M:%S.%f"))
         nombre_paciente = data.get("nombre_paciente")
         email = data.get("email")
         edad = data.get("edad")
@@ -483,12 +571,12 @@ def pago_credito_reserva_index(request):
         print("Validar Rut")
         print(validar)
         if not validar:
-            return Response({'error': 6}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 6}, status=status.HTTP_400_BAD_REQUEST)
         fono = str(data.get("fono"))
         print(fono)
         # Validar la cantidad de caracteres del fono, deben ser 9 digitos y solo números.
         if not fono or not fono.isdigit() or len(fono) != 9:
-            return Response({'error': 7}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 7}, status=status.HTTP_400_BAD_REQUEST)
         fono = f"+56{fono}"
         especialidad = data.get("especialidad")
         valor_esp = Especialidad.objects.get(nombre_especialidad=especialidad)
@@ -516,21 +604,27 @@ def pago_credito_reserva_index(request):
         # Datos para el Full Calendar.
         full_calendar = []
         # Verificar si existe reserva el mismo dia y la misma hora, el mismo doctor, la misma especialidad, etc.
-        veri_res = ReservaModel.objects.filter(fecha_reserva= fecha_reserva_formateada, hora_inicio= hora_inicio,nombre_doctor=nombre_doctor, especialidad=especialidad, nombre_clinica=nombre_clinica)
+        veri_res = ReservaModel.objects.filter(
+            fecha_reserva=fecha_reserva_formateada,
+            hora_inicio=hora_inicio,
+            nombre_doctor=nombre_doctor,
+            especialidad=especialidad,
+            nombre_clinica=nombre_clinica,
+        )
         if veri_res.exists():
-            return Response({'error': 8}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 8}, status=status.HTTP_400_BAD_REQUEST)
         # Agregaremos al nuevo paciente a la BD.
         pac_no_register = {
-            'primer_nombre': primer_nombre,
-            'segundo_nombre': segundo_nombre,
-            'ap_paterno': ap_paterno,
-            'ap_materno': ap_materno,
-            'edad': edad,
-            'sexo': sexo,
-            'rut': rut,
-            'fono': fono,
-            'email': email,
-            'paciente_uuid': str(uuid.uuid4()),
+            "primer_nombre": primer_nombre,
+            "segundo_nombre": segundo_nombre,
+            "ap_paterno": ap_paterno,
+            "ap_materno": ap_materno,
+            "edad": edad,
+            "sexo": sexo,
+            "rut": rut,
+            "fono": fono,
+            "email": email,
+            "paciente_uuid": str(uuid.uuid4()),
         }
         # Creamos el usuario no registrado.
         pac_no_register_serializers = PacienteNoRegisterSerializer(data=pac_no_register)
@@ -539,35 +633,37 @@ def pago_credito_reserva_index(request):
             print(type(user.id))
             # Crear la reserva
             arr = {
-                'fecha_creacion_reserva':fecha_actual_chile,
-                'usuario_creacion_reserva':nombre_paciente,
-                'fecha_reserva':fecha_reserva_formateada,
-                'hora_inicio':hora_inicio,
-                'hora_termino':hora_termino,
-                'especialidad':especialidad,
-                'nombre_doctor':nombre_doctor,
-                'tipo_pago':1,
-                'reserva_uuid': reserva_uuid,
-                'nombre_clinica':nombre_clinica,
-                'direccion_clinica':direccion_clinica,
-                'comuna_clinica':comuna_clinica,
-                'pago_realizado': 1,
-                'fk_pac_no_register':user.id,
+                "fecha_creacion_reserva": fecha_actual_chile,
+                "usuario_creacion_reserva": nombre_paciente,
+                "fecha_reserva": fecha_reserva_formateada,
+                "hora_inicio": hora_inicio,
+                "hora_termino": hora_termino,
+                "especialidad": especialidad,
+                "nombre_doctor": nombre_doctor,
+                "tipo_pago": 1,
+                "reserva_uuid": reserva_uuid,
+                "nombre_clinica": nombre_clinica,
+                "direccion_clinica": direccion_clinica,
+                "comuna_clinica": comuna_clinica,
+                "pago_realizado": 1,
+                "fk_pac_no_register": user.id,
             }
             reserva = ReservaSerializer(data=arr)
             if reserva.is_valid():
                 res = reserva.save()
                 # Redondeamos al entero más cercano.
-                monto_cuotas = round(int(valor_esp.valor_especialidad) / int(cant_cuota))
+                monto_cuotas = round(
+                    int(valor_esp.valor_especialidad) / int(cant_cuota)
+                )
                 cred = {
-                    'credito': 1,
-                    'fecha_pago': fecha_actual_chile.strftime('%Y-%m-%d %H:%M:%S.%f'),
-                    'credito_uuid': str(uuid.uuid4()),
-                    'monto': valor_esp.valor_especialidad,
-                    'cant_cuotas': cant_cuota,
-                    'monto_total': valor_esp.valor_especialidad,
-                    'monto_cuotas': monto_cuotas,
-                    'fk_reserva': res.id,
+                    "credito": 1,
+                    "fecha_pago": fecha_actual_chile.strftime("%Y-%m-%d %H:%M:%S.%f"),
+                    "credito_uuid": str(uuid.uuid4()),
+                    "monto": valor_esp.valor_especialidad,
+                    "cant_cuotas": cant_cuota,
+                    "monto_total": valor_esp.valor_especialidad,
+                    "monto_cuotas": monto_cuotas,
+                    "fk_reserva": res.id,
                 }
                 #
                 pago_credito = CreditoSerializer(data=cred)
@@ -576,33 +672,44 @@ def pago_credito_reserva_index(request):
                     # Correo más PDF, para el usuario registrao por el rut.
                     generar_correo_reserv_index(reserva_uuid, "1")
                     # Filtración de las Reservas.
-                    reser = ReservaModel.objects.filter(nombre_doctor=nombre_doctor, especialidad=especialidad, nombre_clinica=nombre_clinica)
+                    reser = ReservaModel.objects.filter(
+                        nombre_doctor=nombre_doctor,
+                        especialidad=especialidad,
+                        nombre_clinica=nombre_clinica,
+                    )
                     for res in reser:
                         # Formateamos la fecha para mostrarla en los eventos de Full Callendar.
-                        fecha = res.fecha_reserva.strftime('%Y-%m-%d')
+                        fecha = res.fecha_reserva.strftime("%Y-%m-%d")
                         # Formato de hora para mostrar en los eventos de Full Callendar.
-                        hora_ini = res.hora_inicio.strftime('%H:%M:%S')
-                        hora_ter = res.hora_termino.strftime('%H:%M:%S')
-                        full_calendar.append({
-                            'id_reserva': res.id,
-                            'nombre_doctor': res.nombre_doctor,
-                            'title': res.especialidad,
-                            'nombre_clinica': res.nombre_clinica,
-                            'start': f"{fecha}T{hora_ini}",
-                            'end': f"{fecha}T{hora_ter}",
-                            'direccion_clinica': direccion_clinica,
-                            'comuna_clinica': comuna_clinica,
-                            'fecha_reserva': res.fecha_reserva,
-                        })
-                    return Response({'reserva_pagada': full_calendar},
+                        hora_ini = res.hora_inicio.strftime("%H:%M:%S")
+                        hora_ter = res.hora_termino.strftime("%H:%M:%S")
+                        full_calendar.append(
+                            {
+                                "id_reserva": res.id,
+                                "nombre_doctor": res.nombre_doctor,
+                                "title": res.especialidad,
+                                "nombre_clinica": res.nombre_clinica,
+                                "start": f"{fecha}T{hora_ini}",
+                                "end": f"{fecha}T{hora_ter}",
+                                "direccion_clinica": direccion_clinica,
+                                "comuna_clinica": comuna_clinica,
+                                "fecha_reserva": res.fecha_reserva,
+                            }
+                        )
+                    return Response(
+                        {"reserva_pagada": full_calendar},
                         # Específicamos el status.
-                        status=status.HTTP_200_OK)
+                        status=status.HTTP_200_OK,
+                    )
             else:
-                return Response({'error pagar Crédito': 6}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error pagar Crédito": 6}, status=status.HTTP_400_BAD_REQUEST
+                )
 
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 # Método para generar el PDF de una cita reservada por el INDEX.
 def generar_correo_reserv_index(reserva_uuid, tipo_pago):
@@ -616,7 +723,15 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
         print(pac.id)
         id_usuario = pac.id
         # Datos del usuario.
-        nombre_completo = pac.primer_nombre + " " + pac.segundo_nombre + " " + pac.ap_paterno + " " + pac.ap_materno
+        nombre_completo = (
+            pac.primer_nombre
+            + " "
+            + pac.segundo_nombre
+            + " "
+            + pac.ap_paterno
+            + " "
+            + pac.ap_materno
+        )
         rut = pac.rut
         fono = pac.fono
         email = pac.email
@@ -642,11 +757,11 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
         if tipo_pago == "1":
             credito = "Crédito"
         # Si existe descuento, guardamos los datos en estas variables.
-        total_pagar = None;
-        total_pagar_descuento = None;
-        fecha_utilizacion = None;
+        total_pagar = None
+        total_pagar_descuento = None
+        fecha_utilizacion = None
         print(metodo_pago)
-        descuento = None;
+        descuento = None
         #
         if metodo_pago == "0":
             debito = DebitoModel.objects.get(fk_reserva=reserva.id)
@@ -657,33 +772,36 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
             # Creación del correo.
             subject = "Correo Verificación Reserva"
             # Crearemos el envío de correos.
-            template = render_to_string("pacientes_no_registrado/correo_reserva.html",{
-                'nombre_paciente': nombre_completo,
-                'rut_paciente': rut,
-                'email_paciente': email,
-                'fono_paciente': fono,
-                'fecha_reserva': fecha_reserva,
-                'especialidad': especialidad,
-                'nombre_doctor': nombre_doctor,
-                'reserva_uuid': reserva_uuid,
-                'comuna_clinica': comuna_clinica,
-                'direccion_clinica': direccion_clinica,
-                'nombre_clinica': nombre_clinica,
-                'hora_inicio': hora_inicio,
-                'hora_termino': hora_termino,
-                'fecha_creacion_reserva': fecha_creacion_reserva,
-                'total_pagar': valor_base,
-                'tipo_pago': "Débito",
-                'monto': debito.monto,
-                'aplica_descuento': "No",
-                'valor_especialidad': valor_base,
-                'monto_total': debito.monto_total,
-                'total_pagar_descuento': "No aplica",
-                'fecha_utilizacion': "No aplica",
-                'descuento': "No aplica",
-                'reserva_pagada': 'Sí',
-                'valor_base': valor_base,
-            })
+            template = render_to_string(
+                "pacientes_no_registrado/correo_reserva.html",
+                {
+                    "nombre_paciente": nombre_completo,
+                    "rut_paciente": rut,
+                    "email_paciente": email,
+                    "fono_paciente": fono,
+                    "fecha_reserva": fecha_reserva,
+                    "especialidad": especialidad,
+                    "nombre_doctor": nombre_doctor,
+                    "reserva_uuid": reserva_uuid,
+                    "comuna_clinica": comuna_clinica,
+                    "direccion_clinica": direccion_clinica,
+                    "nombre_clinica": nombre_clinica,
+                    "hora_inicio": hora_inicio,
+                    "hora_termino": hora_termino,
+                    "fecha_creacion_reserva": fecha_creacion_reserva,
+                    "total_pagar": valor_base,
+                    "tipo_pago": "Débito",
+                    "monto": debito.monto,
+                    "aplica_descuento": "No",
+                    "valor_especialidad": valor_base,
+                    "monto_total": debito.monto_total,
+                    "total_pagar_descuento": "No aplica",
+                    "fecha_utilizacion": "No aplica",
+                    "descuento": "No aplica",
+                    "reserva_pagada": "Sí",
+                    "valor_base": valor_base,
+                },
+            )
             # # Generar el PDF
             # nombre_carpeta = "Boleta_PDF_PACIENTES"
             # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}"
@@ -744,22 +862,24 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
 
             # --- Configuración de pdfkit ---
             # Detectamos el sistema para evitar el error de ruta del .exe en Linux
-            if os.name == 'nt':  # Windows
-                path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+            if os.name == "nt":  # Windows
+                path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
                 config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
             else:  # Linux (PythonAnywhere)
                 # En Linux suele estar instalado en el PATH global
                 config = pdfkit.configuration()
 
             options = {
-                'enable-local-file-access': None,
+                "enable-local-file-access": None,
             }
 
             print("Generando PDF y adjuntando...")
 
             # Generar el PDF usando la ruta dinámica
             # Eliminamos las rutas C:\\Users... fijas que causan errores en Bash
-            pdfkit.from_string(template, ruta_archivo_pdf, configuration=config, options=options)
+            pdfkit.from_string(
+                template, ruta_archivo_pdf, configuration=config, options=options
+            )
 
             # --- Envío del mensaje ---
             emailSender = EmailMessage(
@@ -784,35 +904,38 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
             # Creación del correo.
             subject = "Correo Verificación Reserva"
             # Crearemos el envío de correos.
-            template = render_to_string("pacientes_no_registrado/correo_reserva.html",{
-                'nombre_paciente': nombre_completo,
-                'rut_paciente': rut,
-                'email_paciente': email,
-                'fono_paciente': fono,
-                'fecha_reserva': fecha_reserva,
-                'especialidad': especialidad,
-                'nombre_doctor': nombre_doctor,
-                'reserva_uuid': reserva_uuid,
-                'comuna_clinica': comuna_clinica,
-                'direccion_clinica': direccion_clinica,
-                'nombre_clinica': nombre_clinica,
-                'hora_inicio': hora_inicio,
-                'hora_termino': hora_termino,
-                'fecha_creacion_reserva': fecha_creacion_reserva,
-                'tipo_pago': 'Crédito',
-                'credito_uuid': metodo_credito.credito_uuid,
-                'total_pagar': valor_base,
-                'valor_especialidad': valor_base,
-                'valor_base': valor_base,
-                'descuento': 'No aplica',
-                'fecha_utilizacion': fecha_utilizacion,
-                'fecha_pago': metodo_credito.fecha_pago,
-                'cant_cuotas': metodo_credito.cant_cuotas,
-                'monto_total': metodo_credito.monto_total,
-                'monto_cuotas': metodo_credito.monto_cuotas,
-                'monto': metodo_credito.monto,
-                'reserva_pagada': 'Sí',
-            })
+            template = render_to_string(
+                "pacientes_no_registrado/correo_reserva.html",
+                {
+                    "nombre_paciente": nombre_completo,
+                    "rut_paciente": rut,
+                    "email_paciente": email,
+                    "fono_paciente": fono,
+                    "fecha_reserva": fecha_reserva,
+                    "especialidad": especialidad,
+                    "nombre_doctor": nombre_doctor,
+                    "reserva_uuid": reserva_uuid,
+                    "comuna_clinica": comuna_clinica,
+                    "direccion_clinica": direccion_clinica,
+                    "nombre_clinica": nombre_clinica,
+                    "hora_inicio": hora_inicio,
+                    "hora_termino": hora_termino,
+                    "fecha_creacion_reserva": fecha_creacion_reserva,
+                    "tipo_pago": "Crédito",
+                    "credito_uuid": metodo_credito.credito_uuid,
+                    "total_pagar": valor_base,
+                    "valor_especialidad": valor_base,
+                    "valor_base": valor_base,
+                    "descuento": "No aplica",
+                    "fecha_utilizacion": fecha_utilizacion,
+                    "fecha_pago": metodo_credito.fecha_pago,
+                    "cant_cuotas": metodo_credito.cant_cuotas,
+                    "monto_total": metodo_credito.monto_total,
+                    "monto_cuotas": metodo_credito.monto_cuotas,
+                    "monto": metodo_credito.monto,
+                    "reserva_pagada": "Sí",
+                },
+            )
             # # Generar el PDF
             # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES"
             # if not os.path.exists(ruta):
@@ -871,21 +994,23 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
 
             # 4. Configuración de pdfkit (Detección automática de SO)
             # Esto evita que PythonAnywhere busque un archivo .exe que no existe
-            if os.name == 'nt':  # Si estás en Windows (Local)
-                path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+            if os.name == "nt":  # Si estás en Windows (Local)
+                path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
                 config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
             else:  # Si estás en Linux (PythonAnywhere)
                 config = pdfkit.configuration()
 
             options = {
-                'enable-local-file-access': None,
+                "enable-local-file-access": None,
             }
 
             print(f"Generando PDF en: {ruta_archivo_final}")
 
             # 5. Creación del PDF
             # Eliminamos la ruta manual C:\\Users... para usar la variable dinámica
-            pdfkit.from_string(template, ruta_archivo_final, configuration=config, options=options)
+            pdfkit.from_string(
+                template, ruta_archivo_final, configuration=config, options=options
+            )
 
             # --- Envío del mensaje ---
 
@@ -908,18 +1033,28 @@ def generar_correo_reserv_index(reserva_uuid, tipo_pago):
             print("Correo enviado con éxito.")
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
+
 #
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_pac_reserva(request, fk_usuario):
     try:
-        res_uuid = request.data.get('res_uuid')
+        res_uuid = request.data.get("res_uuid")
         print(res_uuid)
         print(fk_usuario)
         # Obtenemos el dato del paciente.
         paciente = PacienteModel.objects.get(fk_user=fk_usuario)
-        nombre_paciente = paciente.primer_nombre + ' ' + paciente.segundo_nombre + ' ' + paciente.ap_paterno + ' ' + paciente.ap_materno
+        nombre_paciente = (
+            paciente.primer_nombre
+            + " "
+            + paciente.segundo_nombre
+            + " "
+            + paciente.ap_paterno
+            + " "
+            + paciente.ap_materno
+        )
         print(nombre_paciente)
         datos = []
         # Serializar los datos
@@ -934,34 +1069,37 @@ def delete_pac_reserva(request, fk_usuario):
         # Modificar los datos directamente a partir de los datos serializados.
         res = [
             {
-                'fecha_creacion_reserva': reserv['fecha_creacion_reserva'],
-                'fecha_reserva': reserv['fecha_reserva'],
-                'especialidad': reserv['especialidad'],
-                'nombre_doctor': reserv['nombre_doctor'],
-                'tipo_pago': reserv['tipo_pago'],
-                'reserva_uuid': reserv['reserva_uuid'],
-                'comuna_clinica': reserv['comuna_clinica'],
-                'fk_usuario': reserv['fk_usuario'],
-                'direccion_clinica': reserv['direccion_clinica'],
-                'nombre_clinica': reserv['nombre_clinica'],
-                'hora_inicio': reserv['hora_inicio'],
-                'hora_termino': reserv['hora_termino'],
-                'pago_realizado': reserv['pago_realizado'],
-                'reserva_cerrada': reserv['reserva_cerrada'],
-                'nombre_paciente': nombre_paciente
+                "fecha_creacion_reserva": reserv["fecha_creacion_reserva"],
+                "fecha_reserva": reserv["fecha_reserva"],
+                "especialidad": reserv["especialidad"],
+                "nombre_doctor": reserv["nombre_doctor"],
+                "tipo_pago": reserv["tipo_pago"],
+                "reserva_uuid": reserv["reserva_uuid"],
+                "comuna_clinica": reserv["comuna_clinica"],
+                "fk_usuario": reserv["fk_usuario"],
+                "direccion_clinica": reserv["direccion_clinica"],
+                "nombre_clinica": reserv["nombre_clinica"],
+                "hora_inicio": reserv["hora_inicio"],
+                "hora_termino": reserv["hora_termino"],
+                "pago_realizado": reserv["pago_realizado"],
+                "reserva_cerrada": reserv["reserva_cerrada"],
+                "nombre_paciente": nombre_paciente,
             }
             for reserv in reservas_serializadas.data
         ]
         print(res)
-        return Response({'reserva':res},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+        return Response(
+            {"reserva": res},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def historial_reserva(request):
     try:
@@ -975,21 +1113,50 @@ def historial_reserva(request):
                 paciente = PacienteModel.objects.filter(fk_user=res.fk_usuario.id)
                 print(paciente)
                 for pac in paciente:
-                    nombre_paciente = pac.primer_nombre + ' ' + pac.segundo_nombre + ' ' + pac.ap_paterno + ' ' + pac.ap_materno
+                    nombre_paciente = (
+                        pac.primer_nombre
+                        + " "
+                        + pac.segundo_nombre
+                        + " "
+                        + pac.ap_paterno
+                        + " "
+                        + pac.ap_materno
+                    )
 
-                    arr.append({'id_reserva': res.id,'fecha_reserva': res.fecha_reserva, 'especialidad': res.especialidad, 'nombre_doctor': res.nombre_doctor, 'tipo_pago': res.tipo_pago, 'reserva_uuid': res.reserva_uuid, 'comuna_clinica': res.comuna_clinica, 'direccion_clinica': res.direccion_clinica, 'nombre_clinica': res.nombre_clinica, 'hora_inicio':res.hora_inicio, 'hora_termino': res.hora_termino, 'fecha_creacion_reserva': res.fecha_creacion_reserva, 'nombre_paciente': nombre_paciente})
-            return Response({'reserva':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+                    arr.append(
+                        {
+                            "id_reserva": res.id,
+                            "fecha_reserva": res.fecha_reserva,
+                            "especialidad": res.especialidad,
+                            "nombre_doctor": res.nombre_doctor,
+                            "tipo_pago": res.tipo_pago,
+                            "reserva_uuid": res.reserva_uuid,
+                            "comuna_clinica": res.comuna_clinica,
+                            "direccion_clinica": res.direccion_clinica,
+                            "nombre_clinica": res.nombre_clinica,
+                            "hora_inicio": res.hora_inicio,
+                            "hora_termino": res.hora_termino,
+                            "fecha_creacion_reserva": res.fecha_creacion_reserva,
+                            "nombre_paciente": nombre_paciente,
+                        }
+                    )
+            return Response(
+                {"reserva": arr},
+                # Específicamos el status.
+                status=status.HTTP_200_OK,
+            )
         else:
-            return Response({'error':1},
-                        # Específicamos el status.
-                        status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": 1},
+                # Específicamos el status.
+                status=status.HTTP_400_BAD_REQUEST,
+            )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def listar_clinica_paciente_doctor(request):
     try:
@@ -1000,18 +1167,19 @@ def listar_clinica_paciente_doctor(request):
             print("Todas las clínicas")
             print(cli.id)
             print(cli.nombre_clinica)
-            cl.append({
-                'id': cli.id,
-                'nombre_clinica': cli.nombre_clinica
-            })
-        return Response({'reserva':cl},
-                    # Específicamos el status.
-                    status=status.HTTP_200_OK)
+            cl.append({"id": cli.id, "nombre_clinica": cli.nombre_clinica})
+        return Response(
+            {"reserva": cl},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
+
 #
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def listar_paciente_doctor(request):
     try:
@@ -1021,55 +1189,71 @@ def listar_paciente_doctor(request):
         clinica = ComunaClinicaModel.objects.filter(pk=request.data["id_clinica"])
         arr = []
         for cli in clinica:
-            reservas = ReservaModel.objects.filter(nombre_doctor=nombre_doctor, nombre_clinica=cli.nombre_clinica)
+            reservas = ReservaModel.objects.filter(
+                nombre_doctor=nombre_doctor, nombre_clinica=cli.nombre_clinica
+            )
             for res in reservas:
                 paciente = None
-                nombre_paciente = ''
-                edad = ''
-                sexo = ''
-                rut = ''
+                nombre_paciente = ""
+                edad = ""
+                sexo = ""
+                rut = ""
                 # Paciente registrado
                 if res.fk_usuario:
-                    paciente = PacienteModel.objects.filter(fk_user=res.fk_usuario.id).first()
+                    paciente = PacienteModel.objects.filter(
+                        fk_user=res.fk_usuario.id
+                    ).first()
                 # Paciente no registrado
                 elif res.fk_pac_no_register:
-                    paciente = PacienteNoRegisterModel.objects.filter(pk=res.fk_pac_no_register.id).first()
+                    paciente = PacienteNoRegisterModel.objects.filter(
+                        pk=res.fk_pac_no_register.id
+                    ).first()
                 if paciente:
                     nombre_paciente = f"{paciente.primer_nombre} {paciente.segundo_nombre} {paciente.ap_paterno} {paciente.ap_materno}"
                     edad = paciente.edad
                     sexo = paciente.sexo
                     rut = paciente.rut
-                    arr.append({
-                        'id_reserva': res.id,
-                        'id_paciente': paciente.id,
-                        'fecha_reserva': res.fecha_reserva,
-                        'start': res.hora_inicio,
-                        'end': res.hora_termino,
-                        'title': res.especialidad,
-                        'nombre_clinica': res.nombre_clinica,
-                        'nombre_doctor': res.nombre_doctor,
-                        'nombre_paciente': nombre_paciente,
-                        'edad': edad,
-                        'sexo': sexo,
-                        'rut': rut,
-                        'cod_reserva': res.reserva_uuid,
-                        'reserva_cerrada': res.reserva_cerrada,
-                        'pago_reserva': res.pago_realizado,
-                    })
-        return Response({'paciente': arr}, status=status.HTTP_200_OK)
+                    arr.append(
+                        {
+                            "id_reserva": res.id,
+                            "id_paciente": paciente.id,
+                            "fecha_reserva": res.fecha_reserva,
+                            "start": res.hora_inicio,
+                            "end": res.hora_termino,
+                            "title": res.especialidad,
+                            "nombre_clinica": res.nombre_clinica,
+                            "nombre_doctor": res.nombre_doctor,
+                            "nombre_paciente": nombre_paciente,
+                            "edad": edad,
+                            "sexo": sexo,
+                            "rut": rut,
+                            "cod_reserva": res.reserva_uuid,
+                            "reserva_cerrada": res.reserva_cerrada,
+                            "pago_reserva": res.pago_realizado,
+                        }
+                    )
+        return Response({"paciente": arr}, status=status.HTTP_200_OK)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": 1}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def listar_paciente_doctor_cita(request):
     try:
         # Obtener al usuario que está haciendo la petición.
         usuario = CustomersUsers.objects.get(pk=request.user.id)
         doctor = DoctorModel.objects.get(fk_user=usuario.id)
-        nombre_doctor = doctor.primer_nombre + ' ' + doctor.segundo_nombre + ' ' + doctor.ap_paterno + ' ' + doctor.ap_materno
+        nombre_doctor = (
+            doctor.primer_nombre
+            + " "
+            + doctor.segundo_nombre
+            + " "
+            + doctor.ap_paterno
+            + " "
+            + doctor.ap_materno
+        )
         print(nombre_doctor)
         #
         arr = []
@@ -1080,37 +1264,42 @@ def listar_paciente_doctor_cita(request):
                 user_pc = us.fk_usuario
                 paciente = PacienteModel.objects.get(fk_user=user_pc.id)
                 nombre_paciente = f"{paciente.primer_nombre} {paciente.segundo_nombre} {paciente.ap_paterno} {paciente.ap_materno}"
-                arr.append({
-                    'id_reserva': us.id,
-                    'id_paciente': paciente.id,
-                    'email': user_pc.email,
-                    'fecha_reserva': us.fecha_reserva,
-                    'hora_inicio': us.hora_inicio,
-                    'hora_termino': us.hora_termino,
-                    'especialidad': us.especialidad,
-                    'nombre_clinica': us.nombre_clinica,
-                    'comuna_clinica': us.comuna_clinica,
-                    'direccion_clinica': us.direccion_clinica,
-                    'nombre_doctor': us.nombre_doctor,
-                    'nombre_paciente': nombre_paciente,
-                    'edad': paciente.edad,
-                    'sexo': paciente.sexo,
-                    'rut': paciente.rut,
-                    'fono': paciente.fono,
-                    'reserva_uuid': us.reserva_uuid,
-                    'reserva_cerrada': us.reserva_cerrada,
-                    'tipo_paciente': 'registrado'
-                })
+                arr.append(
+                    {
+                        "id_reserva": us.id,
+                        "id_paciente": paciente.id,
+                        "email": user_pc.email,
+                        "fecha_reserva": us.fecha_reserva,
+                        "hora_inicio": us.hora_inicio,
+                        "hora_termino": us.hora_termino,
+                        "especialidad": us.especialidad,
+                        "nombre_clinica": us.nombre_clinica,
+                        "comuna_clinica": us.comuna_clinica,
+                        "direccion_clinica": us.direccion_clinica,
+                        "nombre_doctor": us.nombre_doctor,
+                        "nombre_paciente": nombre_paciente,
+                        "edad": paciente.edad,
+                        "sexo": paciente.sexo,
+                        "rut": paciente.rut,
+                        "fono": paciente.fono,
+                        "reserva_uuid": us.reserva_uuid,
+                        "reserva_cerrada": us.reserva_cerrada,
+                        "tipo_paciente": "registrado",
+                    }
+                )
         print(arr)
-        return Response({'paciente':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+        return Response(
+            {"paciente": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def listar_paciente_historial_doctor(request, id):
     try:
@@ -1123,16 +1312,34 @@ def listar_paciente_historial_doctor(request, id):
         arr = []
         for res in reserva:
             print("Entramos")
-            arr.append({'id_reserva': res.id,'especialidad': res.especialidad, 'nombre_doctor':res.nombre_doctor,'nombre_clinica': res.nombre_clinica, 'comuna_clinica':res.comuna_clinica, 'direccion_clinica':res.direccion_clinica,'fecha_reserva': res.fecha_reserva,'hora_inicio':res.hora_inicio, 'hora_termino':res.hora_termino, 'fecha_creacion_reserva':res.fecha_creacion_reserva, 'cod_reserva': res.reserva_uuid,'id_usuario': usuario.id})
-        return Response({'reserva':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+            arr.append(
+                {
+                    "id_reserva": res.id,
+                    "especialidad": res.especialidad,
+                    "nombre_doctor": res.nombre_doctor,
+                    "nombre_clinica": res.nombre_clinica,
+                    "comuna_clinica": res.comuna_clinica,
+                    "direccion_clinica": res.direccion_clinica,
+                    "fecha_reserva": res.fecha_reserva,
+                    "hora_inicio": res.hora_inicio,
+                    "hora_termino": res.hora_termino,
+                    "fecha_creacion_reserva": res.fecha_creacion_reserva,
+                    "cod_reserva": res.reserva_uuid,
+                    "id_usuario": usuario.id,
+                }
+            )
+        return Response(
+            {"reserva": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def historial_cli_pac_panel_secretaria(request, id):
     try:
@@ -1145,16 +1352,36 @@ def historial_cli_pac_panel_secretaria(request, id):
         arr = []
         for res in reserva:
             print("Entramos")
-            arr.append({'id_reserva': res.id, 'especialidad': res.especialidad, 'nombre_doctor':res.nombre_doctor,'nombre_clinica': res.nombre_clinica, 'comuna_clinica':res.comuna_clinica, 'direccion_clinica':res.direccion_clinica,'fecha_reserva': res.fecha_reserva,'hora_inicio':res.hora_inicio, 'hora_termino':res.hora_termino, 'fecha_creacion_reserva':res.fecha_creacion_reserva, 'tipo_pago': res.tipo_pago,'reserva_cerrada': res.reserva_cerrada,'cod_reserva': res.reserva_uuid,'id_usuario': usuario.id})
-        return Response({'reserva':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+            arr.append(
+                {
+                    "id_reserva": res.id,
+                    "especialidad": res.especialidad,
+                    "nombre_doctor": res.nombre_doctor,
+                    "nombre_clinica": res.nombre_clinica,
+                    "comuna_clinica": res.comuna_clinica,
+                    "direccion_clinica": res.direccion_clinica,
+                    "fecha_reserva": res.fecha_reserva,
+                    "hora_inicio": res.hora_inicio,
+                    "hora_termino": res.hora_termino,
+                    "fecha_creacion_reserva": res.fecha_creacion_reserva,
+                    "tipo_pago": res.tipo_pago,
+                    "reserva_cerrada": res.reserva_cerrada,
+                    "cod_reserva": res.reserva_uuid,
+                    "id_usuario": usuario.id,
+                }
+            )
+        return Response(
+            {"reserva": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_reserva_panel_secretaria(request, id_reserva):
     try:
@@ -1172,19 +1399,38 @@ def delete_reserva_panel_secretaria(request, id_reserva):
         reserva_usuarios = ReservaModel.objects.filter(fk_usuario=id_usuario)
         print(reserva_usuarios)
         for res in reserva_usuarios:
-            arr.append({'id_reserva': res.id,'especialidad': res.especialidad, 'nombre_doctor':res.nombre_doctor,'nombre_clinica': res.nombre_clinica, 'comuna_clinica':res.comuna_clinica, 'direccion_clinica':res.direccion_clinica,'fecha_reserva': res.fecha_reserva,'hora_inicio':res.hora_inicio, 'hora_termino':res.hora_termino, 'fecha_creacion_reserva':res.fecha_creacion_reserva, 'cod_reserva': res.reserva_uuid, 'pago_realizado': res.pago_realizado,'id_usuario': id_usuario})
+            arr.append(
+                {
+                    "id_reserva": res.id,
+                    "especialidad": res.especialidad,
+                    "nombre_doctor": res.nombre_doctor,
+                    "nombre_clinica": res.nombre_clinica,
+                    "comuna_clinica": res.comuna_clinica,
+                    "direccion_clinica": res.direccion_clinica,
+                    "fecha_reserva": res.fecha_reserva,
+                    "hora_inicio": res.hora_inicio,
+                    "hora_termino": res.hora_termino,
+                    "fecha_creacion_reserva": res.fecha_creacion_reserva,
+                    "cod_reserva": res.reserva_uuid,
+                    "pago_realizado": res.pago_realizado,
+                    "id_usuario": id_usuario,
+                }
+            )
         print("Array")
         print(arr)
         print("Array")
-        return Response({'reserva':arr},
-                    # Específicamos el status.
-                    status=status.HTTP_200_OK)
+        return Response(
+            {"reserva": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def historial_reserva_pac(request, id_usuario):
     try:
@@ -1192,30 +1438,35 @@ def historial_reserva_pac(request, id_usuario):
         reserva = ReservaModel.objects.filter(fk_usuario=id_usuario)
         arr = []
         for res in reserva:
-            arr.append({
-                'id_reserva': res.id,
-                'id_usuario': id_usuario,
-                'fecha_creacion_reserva': res.fecha_creacion_reserva,
-                'fecha_reserva': res.fecha_reserva,
-                'hora_inicio': res.hora_inicio,
-                'hora_termino': res.hora_termino,
-                'especialidad': res.especialidad,
-                'nombre_doctor': res.nombre_doctor,
-                'reserva_uuid': res.reserva_uuid,
-                'nombre_clinica': res.nombre_clinica,
-                'comuna_clinica': res.comuna_clinica,
-                'direccion_clinica': res.direccion_clinica,
-                'reserva_cerrada': res.reserva_cerrada,
-            })
-        return Response({'reserva':arr},
-                    # Específicamos el status.
-                    status=status.HTTP_200_OK)
+            arr.append(
+                {
+                    "id_reserva": res.id,
+                    "id_usuario": id_usuario,
+                    "fecha_creacion_reserva": res.fecha_creacion_reserva,
+                    "fecha_reserva": res.fecha_reserva,
+                    "hora_inicio": res.hora_inicio,
+                    "hora_termino": res.hora_termino,
+                    "especialidad": res.especialidad,
+                    "nombre_doctor": res.nombre_doctor,
+                    "reserva_uuid": res.reserva_uuid,
+                    "nombre_clinica": res.nombre_clinica,
+                    "comuna_clinica": res.comuna_clinica,
+                    "direccion_clinica": res.direccion_clinica,
+                    "reserva_cerrada": res.reserva_cerrada,
+                }
+            )
+        return Response(
+            {"reserva": arr},
+            # Específicamos el status.
+            status=status.HTTP_200_OK,
+        )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 #
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def diagnostico_historial_pac(request, id_usuario, cod_reserva):
     try:
@@ -1229,95 +1480,124 @@ def diagnostico_historial_pac(request, id_usuario, cod_reserva):
         for pac in paciente:
             print(pac.id)
             try:
-                diagnostico = HistorialClinicoModel.objects.get(fk_paciente=pac.id, reserva_uuid=cod_reserva)
+                diagnostico = HistorialClinicoModel.objects.get(
+                    fk_paciente=pac.id, reserva_uuid=cod_reserva
+                )
                 print(diagnostico)
                 print("-****----///")
-                arr.append({
-                    'id_historial': diagnostico.id,
-                    'diagnostico': diagnostico.diagnostico,
-                    'sintoma': diagnostico.sintoma,
-                    'observacion': diagnostico.observacion,
-                    'fecha_creacion_historial': diagnostico.fecha_creacion_historial
-                })
-                return Response({'diagnostico':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+                arr.append(
+                    {
+                        "id_historial": diagnostico.id,
+                        "diagnostico": diagnostico.diagnostico,
+                        "sintoma": diagnostico.sintoma,
+                        "observacion": diagnostico.observacion,
+                        "fecha_creacion_historial": diagnostico.fecha_creacion_historial,
+                    }
+                )
+                return Response(
+                    {"diagnostico": arr},
+                    # Específicamos el status.
+                    status=status.HTTP_200_OK,
+                )
             except:
                 print("No se encontró ningún diagnóstico con esos parámetros.")
                 diagnostico = None
-                return Response({'diagnostico':0},
-                        # Específicamos el status.
-                        status=status.HTTP_404_NOT_FOUND)
-
+                return Response(
+                    {"diagnostico": 0},
+                    # Específicamos el status.
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
 
-@api_view(['POST'])
+
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def cod_reserva_verificacion(request):
     try:
         print(request.data)
         veri_cod = request.data["reserva_uuid"]
         usuario = request.user.id
-        fk_paciente = ReservaModel.objects.filter(reserva_uuid=veri_cod, fk_usuario=usuario)
+        fk_paciente = ReservaModel.objects.filter(
+            reserva_uuid=veri_cod, fk_usuario=usuario
+        )
         if not fk_paciente.exists():
-            return Response({'error': 2}, status=status.HTTP_404_NOT_FOUND)
-        cod_reserva = ReservaModel.objects.filter(reserva_uuid=veri_cod, pago_realizado=0)
+            return Response({"error": 2}, status=status.HTTP_404_NOT_FOUND)
+        cod_reserva = ReservaModel.objects.filter(
+            reserva_uuid=veri_cod, pago_realizado=0
+        )
         arr = []
         #
         if cod_reserva.exists():
             for cod in cod_reserva:
                 paciente = PacienteModel.objects.filter(fk_user=cod.fk_usuario)
-                valor_especialidad = Especialidad.objects.get(nombre_especialidad=cod.especialidad)
+                valor_especialidad = Especialidad.objects.get(
+                    nombre_especialidad=cod.especialidad
+                )
                 for pac in paciente:
-                    nombre_paciente = pac.primer_nombre + ' ' + pac.segundo_nombre + ' ' + pac.ap_paterno + ' ' + pac.ap_materno
+                    nombre_paciente = (
+                        pac.primer_nombre
+                        + " "
+                        + pac.segundo_nombre
+                        + " "
+                        + pac.ap_paterno
+                        + " "
+                        + pac.ap_materno
+                    )
                     fk_user = pac.fk_user.id
-                    arr.append({
-                        'nombre_doctor': cod.nombre_doctor,
-                        'cod_reserva': cod.reserva_uuid,
-                        'fecha_reserva': cod.fecha_reserva,
-                        'fecha_creacion_reserva': cod.fecha_creacion_reserva,
-                        'hora_inicio': cod.hora_inicio,
-                        'hora_termino': cod.hora_termino,
-                        'nombre_clinica': cod.nombre_clinica,
-                        'comuna_clinica': cod.comuna_clinica,
-                        'direccion_clinica': cod.direccion_clinica,
-                        'especialidad': cod.especialidad,
-                        'reserva_cerrada': cod.reserva_cerrada,
-                        'pago_realizado': cod.pago_realizado,
-                        'nombre_paciente': nombre_paciente,
-                        'rut_paciente': pac.rut,
-                        'valor_especialidad': valor_especialidad.valor_especialidad,
-                        'pago_realizado': cod.pago_realizado,
-                        'fk_user': fk_user,
-                    })
-            return Response({'datos':arr},
-                        # Específicamos el status.
-                        status=status.HTTP_200_OK)
+                    arr.append(
+                        {
+                            "nombre_doctor": cod.nombre_doctor,
+                            "cod_reserva": cod.reserva_uuid,
+                            "fecha_reserva": cod.fecha_reserva,
+                            "fecha_creacion_reserva": cod.fecha_creacion_reserva,
+                            "hora_inicio": cod.hora_inicio,
+                            "hora_termino": cod.hora_termino,
+                            "nombre_clinica": cod.nombre_clinica,
+                            "comuna_clinica": cod.comuna_clinica,
+                            "direccion_clinica": cod.direccion_clinica,
+                            "especialidad": cod.especialidad,
+                            "reserva_cerrada": cod.reserva_cerrada,
+                            "pago_realizado": cod.pago_realizado,
+                            "nombre_paciente": nombre_paciente,
+                            "rut_paciente": pac.rut,
+                            "valor_especialidad": valor_especialidad.valor_especialidad,
+                            "pago_realizado": cod.pago_realizado,
+                            "fk_user": fk_user,
+                        }
+                    )
+            return Response(
+                {"datos": arr},
+                # Específicamos el status.
+                status=status.HTTP_200_OK,
+            )
         else:
-            return Response({'error': 1}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": 1}, status=status.HTTP_404_NOT_FOUND)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)
+
 
 #
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def cod_reserva_verificacion_index(request):
     try:
-        print("Ingresamos a la función de verificación del código de reserva en el index")
+        print(
+            "Ingresamos a la función de verificación del código de reserva en el index"
+        )
         veri_cod = request.data.get("reserva_uuid")
 
         # Validamos que la reserva existe
         res = ReservaModel.objects.filter(reserva_uuid=veri_cod)
         if not res.exists():
-            return Response({'error': 2}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": 2}, status=status.HTTP_404_NOT_FOUND)
 
         # Validar si ya está pagada
         if res.filter(pago_realizado=1).exists():
-            return Response({'error': 3}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": 3}, status=status.HTTP_404_NOT_FOUND)
 
         arr = []
         # Filtramos las que están pendientes de pago.
@@ -1327,60 +1607,68 @@ def cod_reserva_verificacion_index(request):
             for cod in cod_reserva_efectiva:
                 # Obtener valor de especialidad
                 try:
-                    espec = Especialidad.objects.get(nombre_especialidad=cod.especialidad)
+                    espec = Especialidad.objects.get(
+                        nombre_especialidad=cod.especialidad
+                    )
                     valor = espec.valor_especialidad
                 except Especialidad.DoesNotExist:
                     valor = 0
 
                 # Diccionario base con datos de la reserva
                 datos_paciente = {
-                    'nombre_doctor': cod.nombre_doctor,
-                    'cod_reserva': cod.reserva_uuid,
-                    'fecha_reserva': cod.fecha_reserva,
-                    'fecha_creacion_reserva': cod.fecha_creacion_reserva,
-                    'hora_inicio': cod.hora_inicio,
-                    'hora_termino': cod.hora_termino,
-                    'nombre_clinica': cod.nombre_clinica,
-                    'comuna_clinica': cod.comuna_clinica,
-                    'direccion_clinica': cod.direccion_clinica,
-                    'especialidad': cod.especialidad,
-                    'reserva_cerrada': cod.reserva_cerrada,
-                    'pago_realizado': cod.pago_realizado,
-                    'valor_especialidad': valor,
+                    "nombre_doctor": cod.nombre_doctor,
+                    "cod_reserva": cod.reserva_uuid,
+                    "fecha_reserva": cod.fecha_reserva,
+                    "fecha_creacion_reserva": cod.fecha_creacion_reserva,
+                    "hora_inicio": cod.hora_inicio,
+                    "hora_termino": cod.hora_termino,
+                    "nombre_clinica": cod.nombre_clinica,
+                    "comuna_clinica": cod.comuna_clinica,
+                    "direccion_clinica": cod.direccion_clinica,
+                    "especialidad": cod.especialidad,
+                    "reserva_cerrada": cod.reserva_cerrada,
+                    "pago_realizado": cod.pago_realizado,
+                    "valor_especialidad": valor,
                 }
 
                 # CASO A: PACIENTE REGISTRADO
                 if cod.fk_usuario:
                     pac = PacienteModel.objects.filter(fk_user=cod.fk_usuario).first()
                     if pac:
-                        datos_paciente.update({
-                            'nombre_paciente': f"{pac.primer_nombre} {pac.segundo_nombre} {pac.ap_paterno} {pac.ap_materno}",
-                            'rut_paciente': pac.rut,
-                            'email': cod.fk_usuario.email,
-                            'fk_user': cod.fk_usuario.id,
-                        })
+                        datos_paciente.update(
+                            {
+                                "nombre_paciente": f"{pac.primer_nombre} {pac.segundo_nombre} {pac.ap_paterno} {pac.ap_materno}",
+                                "rut_paciente": pac.rut,
+                                "email": cod.fk_usuario.email,
+                                "fk_user": cod.fk_usuario.id,
+                            }
+                        )
 
                 # CASO B: PACIENTE NO REGISTRADO
                 elif cod.fk_pac_no_register:
                     pac_no = cod.fk_pac_no_register
-                    datos_paciente.update({
-                        'nombre_paciente': f"{pac_no.primer_nombre} {pac_no.segundo_nombre} {pac_no.ap_paterno} {pac_no.ap_materno}",
-                        'rut_paciente': pac_no.rut,
-                        'email': pac_no.email,
-                        'fk_user': None,
-                    })
+                    datos_paciente.update(
+                        {
+                            "nombre_paciente": f"{pac_no.primer_nombre} {pac_no.segundo_nombre} {pac_no.ap_paterno} {pac_no.ap_materno}",
+                            "rut_paciente": pac_no.rut,
+                            "email": pac_no.email,
+                            "fk_user": None,
+                        }
+                    )
 
                 arr.append(datos_paciente)
 
-            return Response({'datos': arr}, status=status.HTTP_200_OK)
+            return Response({"datos": arr}, status=status.HTTP_200_OK)
 
-        return Response({'error': 2}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": 2}, status=status.HTTP_404_NOT_FOUND)
 
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": 0}, status=status.HTTP_400_BAD_REQUEST)
+
+
 #
-@api_view(['PUT'])
+@api_view(["PUT", "PATCH"])
 @permission_classes([IsAuthenticated])
 def update_pago_debito_reserva(request, reserva_uuid):
     try:
@@ -1398,15 +1686,17 @@ def update_pago_debito_reserva(request, reserva_uuid):
         dato_reserva = ReservaModel.objects.filter(reserva_uuid=reserva_uuid)
         valor_especialidad = ""
         for dato in dato_reserva:
-            valor_especialidad = Especialidad.objects.get(nombre_especialidad=dato.especialidad)
+            valor_especialidad = Especialidad.objects.get(
+                nombre_especialidad=dato.especialidad
+            )
         #
-        id_descuento = "";
-        valor_desc_aplicado = "";
-        id_paciente = "";
-        nombre_paciente = "";
-        aplicar_desc_bd = 0;
-        update_res_data = "";
-        aplicar_desc = "";
+        id_descuento = ""
+        valor_desc_aplicado = ""
+        id_paciente = ""
+        nombre_paciente = ""
+        aplicar_desc_bd = 0
+        update_res_data = ""
+        aplicar_desc = ""
         #
         if dato_reserva.exists():
             #
@@ -1419,102 +1709,130 @@ def update_pago_debito_reserva(request, reserva_uuid):
                 fecha_actual = date.today()
                 for cod in cod_ver:
                     id_descuento = cod.id
-                    asignado = DescuentoPaciente.objects.filter(fk_descuento=cod.id, fk_paciente=cod.id)
+                    asignado = DescuentoPaciente.objects.filter(
+                        fk_descuento=cod.id, fk_paciente=cod.id
+                    )
                     if asignado.exists():
-                        return Response({'error': 3}, status=400)
+                        return Response({"error": 3}, status=400)
                     #
                     if fecha_actual > cod.fecha_termino:
-                        return Response({'error': 4}, status=400)
+                        return Response({"error": 4}, status=400)
                     # Verificar Fecha de caducación Descuentos.
                     if fecha_actual <= cod.fecha_termino:
                         aplicar_desc_bd = 1
                         porcentaje = cod.descuento / 100
-                        valor_desc_aplicado = int(valor_especialidad.valor_especialidad * porcentaje)
-                        aplicar_desc = int(valor_especialidad.valor_especialidad - valor_desc_aplicado)
+                        valor_desc_aplicado = int(
+                            valor_especialidad.valor_especialidad * porcentaje
+                        )
+                        aplicar_desc = int(
+                            valor_especialidad.valor_especialidad - valor_desc_aplicado
+                        )
                     #
                     if aplicar_desc_bd == 1:
                         print("Aplica Descuento")
                         # Actualizamos el pago de la reserva.
                         update_res_data = {
-                            'tipo_pago': '0',
-                            'pago_realizado': 1,
+                            "tipo_pago": "0",
+                            "pago_realizado": 1,
                         }
                         #
-                        instancia_reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-                        update_res = ReservaSerializer(instancia_reserva, data=update_res_data, partial=True)
+                        instancia_reserva = ReservaModel.objects.get(
+                            reserva_uuid=reserva_uuid
+                        )
+                        update_res = ReservaSerializer(
+                            instancia_reserva, data=update_res_data, partial=True
+                        )
                         #
                         if update_res.is_valid():
                             id_reserva = update_res.save()
-                            data_debito= {
-                                'debito': debito,
-                                'monto': valor_especialidad.valor_especialidad,
-                                'monto_total': aplicar_desc,
-                                'debito_uuid': debito_uuid,
-                                'fk_reserva': id_reserva.id,
+                            data_debito = {
+                                "debito": debito,
+                                "monto": valor_especialidad.valor_especialidad,
+                                "monto_total": aplicar_desc,
+                                "debito_uuid": debito_uuid,
+                                "fk_reserva": id_reserva.id,
                             }
                             insert_debito = DebitoSerializer(data=data_debito)
                             if insert_debito.is_valid():
                                 insert_debito.save()
                                 # Insertamos en la tabla intermedia el fk del pac y el fk del descuento.
                                 data_pac_desc = {
-                                    'total_pagar': valor_especialidad.valor_especialidad,
-                                    'total_pagar_descuento': aplicar_desc,
-                                    'fk_descuento': id_descuento,
-                                    'fk_paciente': id_paciente,
+                                    "total_pagar": valor_especialidad.valor_especialidad,
+                                    "total_pagar_descuento": aplicar_desc,
+                                    "fk_descuento": id_descuento,
+                                    "fk_paciente": id_paciente,
                                 }
                                 #
-                                insertar_desc = DescuentoPacienteSerializer(data=data_pac_desc)
+                                insertar_desc = DescuentoPacienteSerializer(
+                                    data=data_pac_desc
+                                )
                                 if insertar_desc.is_valid():
                                     insertar_desc.save()
                                     correo_res_pagada(reserva_uuid, cod.id)
-                                    return Response({'success':1},
-                                            # Específicamos el status.
-                                            status=status.HTTP_200_OK)
+                                    return Response(
+                                        {"success": 1},
+                                        # Específicamos el status.
+                                        status=status.HTTP_200_OK,
+                                    )
             if aplicar_desc_bd == 0:
                 #
-                dato_reserva_sin_descuento = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+                dato_reserva_sin_descuento = ReservaModel.objects.get(
+                    reserva_uuid=reserva_uuid
+                )
                 # Actualizamos el pago de la reserva.
                 update_res_data = {
-                    'tipo_pago': 0,
-                    'pago_realizado': 1,
+                    "tipo_pago": 0,
+                    "pago_realizado": 1,
                 }
                 #
-                update_res = ReservaSerializer(dato_reserva_sin_descuento, data=update_res_data, partial=True)
+                update_res = ReservaSerializer(
+                    dato_reserva_sin_descuento, data=update_res_data, partial=True
+                )
                 #
                 if update_res.is_valid():
                     id_reserva = update_res.save()
-                    data_debito= {
-                        'debito': debito,
-                        'monto': valor_especialidad.valor_especialidad,
-                        'monto_total': valor_especialidad.valor_especialidad,
-                        'debito_uuid': debito_uuid,
-                        'fk_reserva': id_reserva.id,
+                    data_debito = {
+                        "debito": debito,
+                        "monto": valor_especialidad.valor_especialidad,
+                        "monto_total": valor_especialidad.valor_especialidad,
+                        "debito_uuid": debito_uuid,
+                        "fk_reserva": id_reserva.id,
                     }
                     #
                     # Verificamos si el pago ya fue realizado.
-                    pago_realizado = DebitoModel.objects.filter(fk_reserva=id_reserva.id)
+                    pago_realizado = DebitoModel.objects.filter(
+                        fk_reserva=id_reserva.id
+                    )
                     if pago_realizado.exists():
-                        return Response({'error': 5}, status=400)
+                        return Response({"error": 5}, status=400)
                     insert_debito = DebitoSerializer(data=data_debito)
-                    dato_reserva_debito = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+                    dato_reserva_debito = ReservaModel.objects.get(
+                        reserva_uuid=reserva_uuid
+                    )
                     if insert_debito.is_valid():
                         insert_debito.save()
                         # Dato para crear el email.
                         correo_res_pagada(reserva_uuid, 0)
-                        return Response({'success':1},
-                                # Específicamos el status.
-                                status=status.HTTP_200_OK)
+                        return Response(
+                            {"success": 1},
+                            # Específicamos el status.
+                            status=status.HTTP_200_OK,
+                        )
                     else:
                         print("Errores Debito:", insert_debito.errors)
-                        return Response(insert_debito.errors, status=status.HTTP_400_BAD_REQUEST)
+                        return Response(
+                            insert_debito.errors, status=status.HTTP_400_BAD_REQUEST
+                        )
         else:
             print("Error....")
-            return Response({'error': 2}, status=400)
+            return Response({"error": 2}, status=400)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)
+
+
 #
-@api_view(['PUT'])
+@api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_pago_credito_reserva(request, reserva_uuid):
     try:
@@ -1534,15 +1852,17 @@ def update_pago_credito_reserva(request, reserva_uuid):
         dato_reserva = ReservaModel.objects.filter(reserva_uuid=reserva_uuid)
         valor_especialidad = None
         for dato in dato_reserva:
-            valor_especialidad = Especialidad.objects.get(nombre_especialidad=dato.especialidad)
+            valor_especialidad = Especialidad.objects.get(
+                nombre_especialidad=dato.especialidad
+            )
         #
-        id_descuento = None;
-        valor_desc_aplicado = None;
-        id_paciente = None;
-        nombre_paciente = None;
-        aplicar_desc_bd = 0;
-        update_res_data = None;
-        aplicar_desc = None;
+        id_descuento = None
+        valor_desc_aplicado = None
+        id_paciente = None
+        nombre_paciente = None
+        aplicar_desc_bd = 0
+        update_res_data = None
+        aplicar_desc = None
         #
         if dato_reserva.exists():
             #
@@ -1555,41 +1875,51 @@ def update_pago_credito_reserva(request, reserva_uuid):
                 fecha_actual = date.today()
                 for cod in cod_ver:
                     id_descuento = cod.id
-                    asignado = DescuentoPaciente.objects.filter(fk_descuento=cod.id, fk_paciente=cod.id)
+                    asignado = DescuentoPaciente.objects.filter(
+                        fk_descuento=cod.id, fk_paciente=cod.id
+                    )
                     if asignado.exists():
-                        return Response({'error': 3}, status=400)
+                        return Response({"error": 3}, status=400)
                     #
                     if fecha_actual > cod.fecha_termino:
-                        return Response({'error': 4}, status=400)
+                        return Response({"error": 4}, status=400)
                     # Verificar Fecha de caducación Descuentos.
                     if fecha_actual <= cod.fecha_termino:
                         aplicar_desc_bd = 1
                         porcentaje = cod.descuento / 100
-                        valor_desc_aplicado = int(valor_especialidad.valor_especialidad * porcentaje)
-                        aplicar_desc = int(valor_especialidad.valor_especialidad - valor_desc_aplicado)
+                        valor_desc_aplicado = int(
+                            valor_especialidad.valor_especialidad * porcentaje
+                        )
+                        aplicar_desc = int(
+                            valor_especialidad.valor_especialidad - valor_desc_aplicado
+                        )
                     #
                     if aplicar_desc_bd == 1:
                         print("Aplica Descuento")
                         # Actualizamos el pago de la reserva.
                         update_res_data = {
-                            'tipo_pago': '1',
-                            'pago_realizado': 1,
+                            "tipo_pago": "1",
+                            "pago_realizado": 1,
                         }
-                        reserva_instance = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+                        reserva_instance = ReservaModel.objects.get(
+                            reserva_uuid=reserva_uuid
+                        )
                         #
-                        update_res = ReservaSerializer(reserva_instance, data=update_res_data, partial=True)
+                        update_res = ReservaSerializer(
+                            reserva_instance, data=update_res_data, partial=True
+                        )
                         #
                         if update_res.is_valid():
                             id_reserva = update_res.save()
                             monto_cuotas = aplicar_desc / cant_cuota
-                            data_credito= {
-                                'credito': credito,
-                                'monto': valor_especialidad.valor_especialidad,
-                                'monto_total': aplicar_desc,
-                                'monto_cuotas': int(monto_cuotas),
-                                'credito_uuid': credito_uuid,
-                                'cant_cuotas': cant_cuota,
-                                'fk_reserva': id_reserva.id,
+                            data_credito = {
+                                "credito": credito,
+                                "monto": valor_especialidad.valor_especialidad,
+                                "monto_total": aplicar_desc,
+                                "monto_cuotas": int(monto_cuotas),
+                                "credito_uuid": credito_uuid,
+                                "cant_cuotas": cant_cuota,
+                                "fk_reserva": id_reserva.id,
                             }
                             insert_credito = CreditoSerializer(data=data_credito)
                             print("Pasamos...")
@@ -1598,70 +1928,87 @@ def update_pago_credito_reserva(request, reserva_uuid):
                                 print("Pasamos el UPDATE Reserva")
                                 # Insertamos en la tabla intermedia el fk del pac y el fk del descuento.
                                 data_pac_desc = {
-                                    'total_pagar': valor_especialidad.valor_especialidad,
-                                    'total_pagar_descuento': aplicar_desc,
-                                    'fk_descuento': id_descuento,
-                                    'fk_paciente': id_paciente,
+                                    "total_pagar": valor_especialidad.valor_especialidad,
+                                    "total_pagar_descuento": aplicar_desc,
+                                    "fk_descuento": id_descuento,
+                                    "fk_paciente": id_paciente,
                                 }
                                 #
-                                insertar_desc = DescuentoPacienteSerializer(data=data_pac_desc)
+                                insertar_desc = DescuentoPacienteSerializer(
+                                    data=data_pac_desc
+                                )
                                 if insertar_desc.is_valid():
                                     insertar_desc.save()
                                     correo_res_pagada(reserva_uuid, id_descuento)
-                                    return Response({'success':1},
-                                            # Específicamos el status.
-                                          status=status.HTTP_200_OK)
+                                    return Response(
+                                        {"success": 1},
+                                        # Específicamos el status.
+                                        status=status.HTTP_200_OK,
+                                    )
                             else:
                                 # Aquí capturamos los errores del serializer.
                                 errores = insert_credito.errors
                                 print("Errores de validación:", errores)
             if aplicar_desc_bd == 0:
                 #
-                dato_reserva_sin_descuento = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+                dato_reserva_sin_descuento = ReservaModel.objects.get(
+                    reserva_uuid=reserva_uuid
+                )
                 # Actualizamos el pago de la reserva.
                 update_res_data = {
-                    'tipo_pago': 1,
-                    'pago_realizado': 1,
+                    "tipo_pago": 1,
+                    "pago_realizado": 1,
                 }
                 #
-                update_res = ReservaSerializer(dato_reserva_sin_descuento, data=update_res_data, partial=True)
+                update_res = ReservaSerializer(
+                    dato_reserva_sin_descuento, data=update_res_data, partial=True
+                )
                 #
                 valor_esp = int(valor_especialidad.valor_especialidad)
                 monto_cuota = valor_esp / cant_cuota
                 monto_cuota = int(monto_cuota)
                 if update_res.is_valid():
                     id_reserva = update_res.save()
-                    data_credito= {
-                        'credito': credito,
-                        'monto_total': valor_especialidad.valor_especialidad,
-                        'monto_cuotas': monto_cuota,
-                        'credito_uuid': credito_uuid,
-                        'cant_cuotas': cant_cuota,
-                        'fk_reserva': id_reserva.id,
-                        'monto': valor_especialidad.valor_especialidad,
+                    data_credito = {
+                        "credito": credito,
+                        "monto_total": valor_especialidad.valor_especialidad,
+                        "monto_cuotas": monto_cuota,
+                        "credito_uuid": credito_uuid,
+                        "cant_cuotas": cant_cuota,
+                        "fk_reserva": id_reserva.id,
+                        "monto": valor_especialidad.valor_especialidad,
                     }
                     # Verificamos si el pago ya fue realizado.
-                    pago_realizado = CreditoModel.objects.filter(fk_reserva=id_reserva.id)
+                    pago_realizado = CreditoModel.objects.filter(
+                        fk_reserva=id_reserva.id
+                    )
                     if pago_realizado.exists():
-                        return Response({'error': 5}, status=400)
+                        return Response({"error": 5}, status=400)
                     insert_credito = CreditoSerializer(data=data_credito)
-                    dato_reserva_debito = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+                    dato_reserva_debito = ReservaModel.objects.get(
+                        reserva_uuid=reserva_uuid
+                    )
                     if insert_credito.is_valid():
                         insert_credito.save()
                         # Dato para crear el email.
                         correo_res_pagada(reserva_uuid, 0)
-                        return Response({'success':1},
-                                # Específicamos el status.
-                                status=status.HTTP_200_OK)
+                        return Response(
+                            {"success": 1},
+                            # Específicamos el status.
+                            status=status.HTTP_200_OK,
+                        )
                     else:
                         print("Errores Crédito:", insert_credito.errors)
-                        return Response(insert_credito.errors, status=status.HTTP_400_BAD_REQUEST)
+                        return Response(
+                            insert_credito.errors, status=status.HTTP_400_BAD_REQUEST
+                        )
         else:
             print("Error....")
-            return Response({'error': 2}, status=400)
+            return Response({"error": 2}, status=400)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)
+
 
 # Reserva creada por la SECRETARIA y pagada desde el panel PACIENTE.
 def correo_res_pagada(reserva_uuid, fk_descuento):
@@ -1679,7 +2026,15 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
 
         id_usuario = paciente.fk_user.id
         # Datos del usuario.
-        nombre_completo = paciente.primer_nombre + " " + paciente.segundo_nombre + " " + paciente.ap_paterno + " " + paciente.ap_materno
+        nombre_completo = (
+            paciente.primer_nombre
+            + " "
+            + paciente.segundo_nombre
+            + " "
+            + paciente.ap_paterno
+            + " "
+            + paciente.ap_materno
+        )
         rut = paciente.rut
         fono = paciente.fono
         email = usuario.email
@@ -1705,11 +2060,11 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
         if tipo_pago == "1":
             credito = "Crédito"
         # Si existe descuento, guardamos los datos en estas variables.
-        total_pagar = None;
-        total_pagar_descuento = None;
-        fecha_utilizacion = None;
+        total_pagar = None
+        total_pagar_descuento = None
+        fecha_utilizacion = None
         print(metodo_pago)
-        descuento = None;
+        descuento = None
         #
         if metodo_pago == "0":
             if fk_descuento == 0:
@@ -1721,33 +2076,36 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
                 # Creación del correo.
                 subject = "Correo Verificación Reserva"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/correo_reserva.html",{
-                    'nombre_paciente': nombre_completo,
-                    'rut_paciente': rut,
-                    'email_paciente': email,
-                    'fono_paciente': fono,
-                    'fecha_reserva': fecha_reserva,
-                    'especialidad': especialidad,
-                    'nombre_doctor': nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': comuna_clinica,
-                    'direccion_clinica': direccion_clinica,
-                    'nombre_clinica': nombre_clinica,
-                    'hora_inicio': hora_inicio,
-                    'hora_termino': hora_termino,
-                    'fecha_creacion_reserva': fecha_creacion_reserva,
-                    'total_pagar': valor_base,
-                    'tipo_pago': "Débito",
-                    'monto': debito.monto,
-                    'aplica_descuento': "No",
-                    'valor_especialidad': valor_base,
-                    'monto_total': debito.monto_total,
-                    'total_pagar_descuento': "No aplica",
-                    'fecha_utilizacion': "No aplica",
-                    'descuento': "No aplica",
-                    'reserva_pagada': 'Sí',
-                    'valor_base': valor_base,
-                })
+                template = render_to_string(
+                    "pacientes/correo_reserva.html",
+                    {
+                        "nombre_paciente": nombre_completo,
+                        "rut_paciente": rut,
+                        "email_paciente": email,
+                        "fono_paciente": fono,
+                        "fecha_reserva": fecha_reserva,
+                        "especialidad": especialidad,
+                        "nombre_doctor": nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": comuna_clinica,
+                        "direccion_clinica": direccion_clinica,
+                        "nombre_clinica": nombre_clinica,
+                        "hora_inicio": hora_inicio,
+                        "hora_termino": hora_termino,
+                        "fecha_creacion_reserva": fecha_creacion_reserva,
+                        "total_pagar": valor_base,
+                        "tipo_pago": "Débito",
+                        "monto": debito.monto,
+                        "aplica_descuento": "No",
+                        "valor_especialidad": valor_base,
+                        "monto_total": debito.monto_total,
+                        "total_pagar_descuento": "No aplica",
+                        "fecha_utilizacion": "No aplica",
+                        "descuento": "No aplica",
+                        "reserva_pagada": "Sí",
+                        "valor_base": valor_base,
+                    },
+                )
                 # # Generar el PDF
                 # nombre_carpeta = "Boleta_PDF_PACIENTES"
                 # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}"
@@ -1807,21 +2165,25 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
 
                 # --- Configuración de pdfkit ---
                 # Detectamos el sistema para no buscar un .exe en Linux
-                if os.name == 'nt':  # Windows
-                    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+                if os.name == "nt":  # Windows
+                    path_wkhtmltopdf = (
+                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    )
                     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
                 else:  # Linux (PythonAnywhere)
                     # En Linux, pdfkit busca el binario directamente en el sistema
                     config = pdfkit.configuration()
 
                 options = {
-                    'enable-local-file-access': None,
+                    "enable-local-file-access": None,
                 }
 
                 print("Adjuntando y generando PDF...")
 
                 # Generar el PDF usando la ruta dinámica (sin C:\\Users...)
-                pdfkit.from_string(template, ruta_pdf_final, configuration=config, options=options)
+                pdfkit.from_string(
+                    template, ruta_pdf_final, configuration=config, options=options
+                )
 
                 # --- Envío del mensaje ---
                 emailSender = EmailMessage(
@@ -1842,8 +2204,10 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
             if fk_descuento != 0:
                 print("Ingresamos Correctamente")
                 reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-                debito_uuid = DebitoModel.objects.get(fk_reserva= reserva.id)
-                desc_pac = DescuentoPaciente.objects.filter(fk_paciente=paciente.id, fk_descuento=fk_descuento)
+                debito_uuid = DebitoModel.objects.get(fk_reserva=reserva.id)
+                desc_pac = DescuentoPaciente.objects.filter(
+                    fk_paciente=paciente.id, fk_descuento=fk_descuento
+                )
                 desc = DescuentoModel.objects.get(pk=fk_descuento)
                 # Realizamos la operacion de descuento para mostrar en el Correo.
                 pagar = valor_base * desc.descuento / 100
@@ -1862,34 +2226,37 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
                     # Creación del correo.
                     subject = "Correo Verificación Reserva"
                     # Crearemos el envío de correos.
-                    template = render_to_string("pacientes/correo_reserva.html",{
-                        'nombre_paciente': nombre_completo,
-                        'rut_paciente': rut,
-                        'email_paciente': email,
-                        'fono_paciente': fono,
-                        'fecha_reserva': fecha_reserva,
-                        'especialidad': especialidad,
-                        'nombre_doctor': nombre_doctor,
-                        'reserva_uuid': reserva_uuid,
-                        'comuna_clinica': comuna_clinica,
-                        'direccion_clinica': direccion_clinica,
-                        'nombre_clinica': nombre_clinica,
-                        'hora_inicio': hora_inicio,
-                        'hora_termino': hora_termino,
-                        'fecha_creacion_reserva': fecha_creacion_reserva,
-                        'total_pagar': total_pagar,
-                        'tipo_pago': "Débito",
-                        'monto': debito_uuid.monto,
-                        'aplica_descuento': aplica_descuento,
-                        'valor_descuento': desc.descuento,
-                        'monto_total': debito_uuid.monto_total,
-                        'total_pagar': total_pagar_descuento,
-                        'fecha_utilizacion': fecha_utilizacion,
-                        'descuento': desc.descuento,
-                        'reserva_pagada': 'Sí',
-                        'valor_base': valor_base,
-                        'valor_especialidad': valor_base,
-                    })
+                    template = render_to_string(
+                        "pacientes/correo_reserva.html",
+                        {
+                            "nombre_paciente": nombre_completo,
+                            "rut_paciente": rut,
+                            "email_paciente": email,
+                            "fono_paciente": fono,
+                            "fecha_reserva": fecha_reserva,
+                            "especialidad": especialidad,
+                            "nombre_doctor": nombre_doctor,
+                            "reserva_uuid": reserva_uuid,
+                            "comuna_clinica": comuna_clinica,
+                            "direccion_clinica": direccion_clinica,
+                            "nombre_clinica": nombre_clinica,
+                            "hora_inicio": hora_inicio,
+                            "hora_termino": hora_termino,
+                            "fecha_creacion_reserva": fecha_creacion_reserva,
+                            "total_pagar": total_pagar,
+                            "tipo_pago": "Débito",
+                            "monto": debito_uuid.monto,
+                            "aplica_descuento": aplica_descuento,
+                            "valor_descuento": desc.descuento,
+                            "monto_total": debito_uuid.monto_total,
+                            "total_pagar": total_pagar_descuento,
+                            "fecha_utilizacion": fecha_utilizacion,
+                            "descuento": desc.descuento,
+                            "reserva_pagada": "Sí",
+                            "valor_base": valor_base,
+                            "valor_especialidad": valor_base,
+                        },
+                    )
                     # Envío del mensaje. Debemos pasar el template.
                     emailSender = EmailMessage(
                         subject,
@@ -1910,7 +2277,9 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
             metodo_credito = CreditoModel.objects.get(fk_reserva=reserva.id)
             if fk_descuento != 0:
                 descuento = DescuentoModel.objects.get(pk=fk_descuento)
-                descuento_aplicado = DescuentoPaciente.objects.filter(fk_paciente=paciente.id, fk_descuento=fk_descuento)
+                descuento_aplicado = DescuentoPaciente.objects.filter(
+                    fk_paciente=paciente.id, fk_descuento=fk_descuento
+                )
                 #
                 if descuento_aplicado.exists():
                     for desc_apli in descuento_aplicado:
@@ -1920,74 +2289,80 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
                         fecha_utilizacion = desc_apli.fecha_utilizacion
                 #
                 if not descuento_aplicado.exists():
-                    total_pagar = "No hay Datos";
-                    total_pagar_descuento = "No hay Datos";
-                    fecha_utilizacion = "No hay Datos";
+                    total_pagar = "No hay Datos"
+                    total_pagar_descuento = "No hay Datos"
+                    fecha_utilizacion = "No hay Datos"
                 # Creación del correo.
                 subject = "Correo Verificación Reserva"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/correo_reserva.html",{
-                    'nombre_paciente': nombre_completo,
-                    'rut_paciente': rut,
-                    'email_paciente': email,
-                    'fono_paciente': fono,
-                    'fecha_reserva': fecha_reserva,
-                    'especialidad': especialidad,
-                    'nombre_doctor': nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': comuna_clinica,
-                    'direccion_clinica': direccion_clinica,
-                    'nombre_clinica': nombre_clinica,
-                    'hora_inicio': hora_inicio,
-                    'hora_termino': hora_termino,
-                    'fecha_creacion_reserva': fecha_creacion_reserva,
-                    'tipo_pago': 'Crédito',
-                    'credito_uuid': metodo_credito.credito_uuid,
-                    'total_pagar': total_pagar_descuento,
-                    'valor_especialidad': valor_base,
-                    'valor_base': valor_base,
-                    'descuento': descuento.descuento,
-                    'fecha_utilizacion': fecha_utilizacion,
-                    'fecha_pago': metodo_credito.fecha_pago,
-                    'cant_cuotas': metodo_credito.cant_cuotas,
-                    'monto_total': metodo_credito.monto_total,
-                    'monto_cuotas': metodo_credito.monto_cuotas,
-                    'monto': metodo_credito.monto,
-                    'reserva_pagada': 'Sí',
-                })
+                template = render_to_string(
+                    "pacientes/correo_reserva.html",
+                    {
+                        "nombre_paciente": nombre_completo,
+                        "rut_paciente": rut,
+                        "email_paciente": email,
+                        "fono_paciente": fono,
+                        "fecha_reserva": fecha_reserva,
+                        "especialidad": especialidad,
+                        "nombre_doctor": nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": comuna_clinica,
+                        "direccion_clinica": direccion_clinica,
+                        "nombre_clinica": nombre_clinica,
+                        "hora_inicio": hora_inicio,
+                        "hora_termino": hora_termino,
+                        "fecha_creacion_reserva": fecha_creacion_reserva,
+                        "tipo_pago": "Crédito",
+                        "credito_uuid": metodo_credito.credito_uuid,
+                        "total_pagar": total_pagar_descuento,
+                        "valor_especialidad": valor_base,
+                        "valor_base": valor_base,
+                        "descuento": descuento.descuento,
+                        "fecha_utilizacion": fecha_utilizacion,
+                        "fecha_pago": metodo_credito.fecha_pago,
+                        "cant_cuotas": metodo_credito.cant_cuotas,
+                        "monto_total": metodo_credito.monto_total,
+                        "monto_cuotas": metodo_credito.monto_cuotas,
+                        "monto": metodo_credito.monto,
+                        "reserva_pagada": "Sí",
+                    },
+                )
             else:
                 # Creación del correo.
                 subject = "Correo Verificación Reserva"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/correo_reserva.html",{
-                    'nombre_paciente': nombre_completo,
-                    'rut_paciente': rut,
-                    'email_paciente': email,
-                    'fono_paciente': fono,
-                    'fecha_reserva': fecha_reserva,
-                    'especialidad': especialidad,
-                    'nombre_doctor': nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': comuna_clinica,
-                    'direccion_clinica': direccion_clinica,
-                    'nombre_clinica': nombre_clinica,
-                    'hora_inicio': hora_inicio,
-                    'hora_termino': hora_termino,
-                    'fecha_creacion_reserva': fecha_creacion_reserva,
-                    'tipo_pago': 'Crédito',
-                    'credito_uuid': metodo_credito.credito_uuid,
-                    'total_pagar': valor_base,
-                    'valor_especialidad': valor_base,
-                    'valor_base': valor_base,
-                    'descuento': "No aplica",
-                    'fecha_utilizacion': "No aplica",
-                    'fecha_pago': metodo_credito.fecha_pago,
-                    'cant_cuotas': metodo_credito.cant_cuotas,
-                    'monto_total': metodo_credito.monto_total,
-                    'monto_cuotas': metodo_credito.monto_cuotas,
-                    'monto': metodo_credito.monto,
-                    'reserva_pagada': 'Sí',
-                })
+                template = render_to_string(
+                    "pacientes/correo_reserva.html",
+                    {
+                        "nombre_paciente": nombre_completo,
+                        "rut_paciente": rut,
+                        "email_paciente": email,
+                        "fono_paciente": fono,
+                        "fecha_reserva": fecha_reserva,
+                        "especialidad": especialidad,
+                        "nombre_doctor": nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": comuna_clinica,
+                        "direccion_clinica": direccion_clinica,
+                        "nombre_clinica": nombre_clinica,
+                        "hora_inicio": hora_inicio,
+                        "hora_termino": hora_termino,
+                        "fecha_creacion_reserva": fecha_creacion_reserva,
+                        "tipo_pago": "Crédito",
+                        "credito_uuid": metodo_credito.credito_uuid,
+                        "total_pagar": valor_base,
+                        "valor_especialidad": valor_base,
+                        "valor_base": valor_base,
+                        "descuento": "No aplica",
+                        "fecha_utilizacion": "No aplica",
+                        "fecha_pago": metodo_credito.fecha_pago,
+                        "cant_cuotas": metodo_credito.cant_cuotas,
+                        "monto_total": metodo_credito.monto_total,
+                        "monto_cuotas": metodo_credito.monto_cuotas,
+                        "monto": metodo_credito.monto,
+                        "reserva_pagada": "Sí",
+                    },
+                )
             # Envío del mensaje. Debemos pasar el template.
             emailSender = EmailMessage(
                 subject,
@@ -2003,7 +2378,8 @@ def correo_res_pagada(reserva_uuid, fk_descuento):
             emailSender.send()
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)
+
 
 # Creación PDF pago resrva creada por la SECRETARIA y pagada desde el panel PACIENTE.
 def pdf_res_pagada_pac(template, nombre_paciente, emailSender):
@@ -2035,7 +2411,7 @@ def pdf_res_pagada_pac(template, nombre_paciente, emailSender):
         print(f"Ingresamos al PDF para: {nombre_paciente}")
 
         # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-        carpeta_destino = os.path.join(settings.BASE_DIR, 'BOLETA_PDF_PACIENTES')
+        carpeta_destino = os.path.join(settings.BASE_DIR, "BOLETA_PDF_PACIENTES")
 
         # Verificar si la carpeta existe, si no, la creamos
         if not os.path.exists(carpeta_destino):
@@ -2052,28 +2428,30 @@ def pdf_res_pagada_pac(template, nombre_paciente, emailSender):
 
         # 4. Configuración de pdfkit (Detección de Sistema Operativo)
         # Esto evita errores al buscar el .exe en servidores Linux
-        if os.name == 'nt':  # Si es Windows
-            path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+        if os.name == "nt":  # Si es Windows
+            path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
         else:  # Si es Linux (PythonAnywhere)
             config = pdfkit.configuration()
 
-        options = {'enable-local-file-access': None}
+        options = {"enable-local-file-access": None}
 
         # 5. Generar el PDF usando la ruta dinámica universal
         # Eliminamos las rutas fijas C:\\Users...
-        pdfkit.from_string(template, ruta_final_pdf, configuration=config, options=options)
+        pdfkit.from_string(
+            template, ruta_final_pdf, configuration=config, options=options
+        )
 
         # 6. Envío del mensaje adjuntando el archivo
         # Usamos la misma variable dinámica para asegurar que encuentre el archivo
         emailSender.attach_file(ruta_final_pdf)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)
 
 
 # Este método es solo de prueba de consumo de microservicio por parte de un proyecto aparte el cual le realiza la petición.
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def listar_reservas(request):
     try:
@@ -2086,47 +2464,53 @@ def listar_reservas(request):
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def confirmar_correo_reservas(request, reserva_uuid):
     try:
-        print("Obteniendo la Reserva_uuid de correo para actualizar la BD de confirmación.")
+        print(
+            "Obteniendo la Reserva_uuid de correo para actualizar la BD de confirmación."
+        )
         print(f"Reserva_uuid: {reserva_uuid}")
-        token = request.GET.get('token')
+        token = request.GET.get("token")
         signer = TimestampSigner()
         try:
-            unsigned_value = signer.unsign(token, max_age=60*60*24)  # El token es válido por 24 horas
+            unsigned_value = signer.unsign(
+                token, max_age=60 * 60 * 24
+            )  # El token es válido por 24 horas
             print(f"Token válido. Valor sin firmar: {unsigned_value}")
             # Aquí puedes actualizar la base de datos para marcar la reserva como confirmada
             reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
             reserva.reser_confirmada = 1
             reserva.save()
             # USAMOS RENDER DIRECTO PARA EVITAR ERRORES DE REDIRECCIÓN.
-            return render(request, 'pacientes/web_confirmacion.html')
+            return render(request, "pacientes/web_confirmacion.html")
         except SignatureExpired:
             print("El token ha expirado.")
-            return Response({'error': 'El enlace ha expirado.'}, status=400)
+            return Response({"error": "El enlace ha expirado."}, status=400)
         except BadSignature:
             print("El token no es válido.")
-            return Response({'error': 'Enlace no válido.'}, status=400)
+            return Response({"error": "Enlace no válido."}, status=400)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 # Método para anular una reserva con el correo de confirmacion y anular reserva.
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def anular_reserva(request, reserva_uuid):
     try:
         print("Obteniendo la Reserva_uuid de correo para anular la reserva.")
         print(f"Reserva_uuid: {reserva_uuid}")
-        token = request.GET.get('token')
+        token = request.GET.get("token")
         signer = TimestampSigner()
         try:
             # El token es válido por 24 horas
-            unsigned_value = signer.unsign(token, max_age=60*60*24)
+            unsigned_value = signer.unsign(token, max_age=60 * 60 * 24)
             print(f"Token válido. Valor sin firmar: {unsigned_value}")
             # Aquí actualizamos la base de datos para marcar la reserva como anulada.
             reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
@@ -2136,19 +2520,20 @@ def anular_reserva(request, reserva_uuid):
             reserva.reser_anulada = 1
             reserva.save()
             # USAMOS RENDER DIRECTO PARA EVITAR ERRORES DE REDIRECCIÓN.
-            return render(request, 'pacientes/web_anular_cita.html')
+            return render(request, "pacientes/web_anular_cita.html")
         except SignatureExpired:
             print("El token ha expirado.")
-            return Response({'error': 'El enlace ha expirado.'}, status=400)
+            return Response({"error": "El enlace ha expirado."}, status=400)
         except BadSignature:
             print("El token no es válido.")
-            return Response({'error': 'Enlace no válido.'}, status=400)
+            return Response({"error": "Enlace no válido."}, status=400)
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 1}, status=400)
+        return Response({"error": 1}, status=400)
+
 
 # Pagar la reserva esto es cuando la secretaria realiza la reserva del paciente, por ende, no fue pagada esa reserva.
-@api_view(['POST'])
+@api_view(["POST", "PATCH"])
 @permission_classes([AllowAny])
 def pago_debito_solo_reserva(request):
     try:
@@ -2157,8 +2542,7 @@ def pago_debito_solo_reserva(request):
         reserva_uuid = data.get("cod_reserva_pagar")
         # Validar que existe el código
         if not reserva_uuid:
-            return Response({'error': 0},
-                           status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 0}, status=status.HTTP_400_BAD_REQUEST)
         # Buscar la reserva
         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
 
@@ -2170,18 +2554,22 @@ def pago_debito_solo_reserva(request):
         reserva.save()
         print("Pasamos")
         # Datos para insertar en el tabla débito.
-        monto = Especialidad.objects.get(nombre_especialidad=reserva.especialidad).valor_especialidad
-        monto_total = Especialidad.objects.get(nombre_especialidad=reserva.especialidad).valor_especialidad
+        monto = Especialidad.objects.get(
+            nombre_especialidad=reserva.especialidad
+        ).valor_especialidad
+        monto_total = Especialidad.objects.get(
+            nombre_especialidad=reserva.especialidad
+        ).valor_especialidad
         debito_uuid = str(uuid.uuid4())
-        fecha_pago = datetime.now().strftime('%Y-%m-%d')
+        fecha_pago = datetime.now().strftime("%Y-%m-%d")
         fk_reserva = reserva.id
         debito = {
-            'debito': 0,
-            'monto': monto,
-            'monto_total': monto_total,
-            'debito_uuid': debito_uuid,
-            'fecha_pago': fecha_pago,
-            'fk_reserva': fk_reserva,
+            "debito": 0,
+            "monto": monto,
+            "monto_total": monto_total,
+            "debito_uuid": debito_uuid,
+            "fecha_pago": fecha_pago,
+            "fk_reserva": fk_reserva,
         }
         print(debito)
         # Insertamoslos datos en la tabla Débito.
@@ -2193,35 +2581,54 @@ def pago_debito_solo_reserva(request):
                 print("Paciente Registrado.")
                 usuario = CustomersUsers.objects.get(id=reserva.fk_usuario.id)
                 obtener_paciente = PacienteModel.objects.get(fk_user=usuario.id)
-                nombre_paciente = obtener_paciente.primer_nombre + " " + obtener_paciente.segundo_nombre + " " + obtener_paciente.ap_paterno+ " " + obtener_paciente.ap_materno
-                nombre_archivo_paciente = obtener_paciente.primer_nombre + "_" + obtener_paciente.segundo_nombre + "_" + obtener_paciente.ap_paterno+ "_" + obtener_paciente.ap_materno
+                nombre_paciente = (
+                    obtener_paciente.primer_nombre
+                    + " "
+                    + obtener_paciente.segundo_nombre
+                    + " "
+                    + obtener_paciente.ap_paterno
+                    + " "
+                    + obtener_paciente.ap_materno
+                )
+                nombre_archivo_paciente = (
+                    obtener_paciente.primer_nombre
+                    + "_"
+                    + obtener_paciente.segundo_nombre
+                    + "_"
+                    + obtener_paciente.ap_paterno
+                    + "_"
+                    + obtener_paciente.ap_materno
+                )
                 # Creación del correo.
                 subject = "Correo Reserva Pagada"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/boleta_pago_cod_reserva.html",{
-                    'nombre_paciente': nombre_paciente,
-                    'rut_paciente': obtener_paciente.rut,
-                    'email_paciente': usuario.email,
-                    'fono_paciente': obtener_paciente.fono,
-                    'fecha_reserva':reserva.fecha_reserva,
-                    'especialidad': reserva.especialidad,
-                    'nombre_doctor': reserva.nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': reserva.comuna_clinica,
-                    'direccion_clinica': reserva.direccion_clinica,
-                    'nombre_clinica': reserva.nombre_clinica,
-                    'hora_inicio': reserva.hora_inicio,
-                    'hora_termino': reserva.hora_termino,
-                    'fecha_creacion_reserva': reserva.fecha_creacion_reserva,
-                    'tipo_pago': 'Débito',
-                    'debito_uuid': debito_uuid,
-                    'valor_especialidad': monto_total,
-                    'total_pagar':monto_total,
-                    'descuento': "No aplica",
-                    'fecha_utilizacion': "No aplica",
-                    'fecha_pago': fecha_pago,
-                    'reserva_pagada': 'Sí',
-                })
+                template = render_to_string(
+                    "pacientes/boleta_pago_cod_reserva.html",
+                    {
+                        "nombre_paciente": nombre_paciente,
+                        "rut_paciente": obtener_paciente.rut,
+                        "email_paciente": usuario.email,
+                        "fono_paciente": obtener_paciente.fono,
+                        "fecha_reserva": reserva.fecha_reserva,
+                        "especialidad": reserva.especialidad,
+                        "nombre_doctor": reserva.nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": reserva.comuna_clinica,
+                        "direccion_clinica": reserva.direccion_clinica,
+                        "nombre_clinica": reserva.nombre_clinica,
+                        "hora_inicio": reserva.hora_inicio,
+                        "hora_termino": reserva.hora_termino,
+                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                        "tipo_pago": "Débito",
+                        "debito_uuid": debito_uuid,
+                        "valor_especialidad": monto_total,
+                        "total_pagar": monto_total,
+                        "descuento": "No aplica",
+                        "fecha_utilizacion": "No aplica",
+                        "fecha_pago": fecha_pago,
+                        "reserva_pagada": "Sí",
+                    },
+                )
                 # Envío del mensaje. Debemos pasar el template.
                 emailSender = EmailMessage(
                     subject,
@@ -2235,7 +2642,9 @@ def pago_debito_solo_reserva(request):
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(settings.BASE_DIR, 'BOLETA_PDF_PACIENTES')
+                carpeta_destino = os.path.join(
+                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                )
 
                 # Verificar si la carpeta existe, si no, la creamos
                 if not os.path.exists(carpeta_destino):
@@ -2247,17 +2656,21 @@ def pago_debito_solo_reserva(request):
 
                 # Configuración de pdfkit (Detección de Sistema Operativo)
                 # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == 'nt':  # Si es Windows
-                    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+                if os.name == "nt":  # Si es Windows
+                    path_wkhtmltopdf = (
+                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    )
                     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
                 else:  # Si es Linux (PythonAnywhere)
                     config = pdfkit.configuration()
 
-                options = {'enable-local-file-access': None}
+                options = {"enable-local-file-access": None}
 
                 # Generar el PDF usando la ruta dinámica.
                 # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(template, ruta_final_pdf, configuration=config, options=options)
+                pdfkit.from_string(
+                    template, ruta_final_pdf, configuration=config, options=options
+                )
 
                 # Envío del mensaje adjuntando el archivo
                 # Usamos la misma variable dinámica para asegurar que encuentre el archivo
@@ -2266,38 +2679,59 @@ def pago_debito_solo_reserva(request):
             # Datos del paciente NO registrado.
             if reserva.fk_pac_no_register is not None:
                 print("Ingresamos al Paciente No Registrado.")
-                obtener_paciente = PacienteNoRegisterModel.objects.get(id=reserva.fk_pac_no_register.id)
-                nombre_paciente = obtener_paciente.primer_nombre + " " + obtener_paciente.segundo_nombre + " " + obtener_paciente.ap_paterno+ " " + obtener_paciente.ap_materno
-                nombre_archivo_paciente = obtener_paciente.primer_nombre + "_" + obtener_paciente.segundo_nombre + "_" + obtener_paciente.ap_paterno + "_" + obtener_paciente.ap_materno
+                obtener_paciente = PacienteNoRegisterModel.objects.get(
+                    id=reserva.fk_pac_no_register.id
+                )
+                nombre_paciente = (
+                    obtener_paciente.primer_nombre
+                    + " "
+                    + obtener_paciente.segundo_nombre
+                    + " "
+                    + obtener_paciente.ap_paterno
+                    + " "
+                    + obtener_paciente.ap_materno
+                )
+                nombre_archivo_paciente = (
+                    obtener_paciente.primer_nombre
+                    + "_"
+                    + obtener_paciente.segundo_nombre
+                    + "_"
+                    + obtener_paciente.ap_paterno
+                    + "_"
+                    + obtener_paciente.ap_materno
+                )
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # Creación del correo.
                 subject = "Correo Reserva Pagada"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/boleta_pago_cod_reserva.html",{
-                    'nombre_paciente': nombre_paciente,
-                    'rut_paciente': obtener_paciente.rut,
-                    'email_paciente': obtener_paciente.email,
-                    'fono_paciente': obtener_paciente.fono,
-                    'fecha_reserva':reserva.fecha_reserva,
-                    'especialidad': reserva.especialidad,
-                    'nombre_doctor': reserva.nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': reserva.comuna_clinica,
-                    'direccion_clinica': reserva.direccion_clinica,
-                    'nombre_clinica': reserva.nombre_clinica,
-                    'hora_inicio': reserva.hora_inicio,
-                    'hora_termino': reserva.hora_termino,
-                    'fecha_creacion_reserva': reserva.fecha_creacion_reserva,
-                    'tipo_pago': 'Débito',
-                    'debito_uuid': debito_uuid,
-                    'valor_especialidad': monto_total,
-                    'total_pagar':monto_total,
-                    'descuento': "No aplica",
-                    'fecha_utilizacion': "No aplica",
-                    'fecha_pago': fecha_pago,
-                    'reserva_pagada': 'Sí',
-                })
+                template = render_to_string(
+                    "pacientes/boleta_pago_cod_reserva.html",
+                    {
+                        "nombre_paciente": nombre_paciente,
+                        "rut_paciente": obtener_paciente.rut,
+                        "email_paciente": obtener_paciente.email,
+                        "fono_paciente": obtener_paciente.fono,
+                        "fecha_reserva": reserva.fecha_reserva,
+                        "especialidad": reserva.especialidad,
+                        "nombre_doctor": reserva.nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": reserva.comuna_clinica,
+                        "direccion_clinica": reserva.direccion_clinica,
+                        "nombre_clinica": reserva.nombre_clinica,
+                        "hora_inicio": reserva.hora_inicio,
+                        "hora_termino": reserva.hora_termino,
+                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                        "tipo_pago": "Débito",
+                        "debito_uuid": debito_uuid,
+                        "valor_especialidad": monto_total,
+                        "total_pagar": monto_total,
+                        "descuento": "No aplica",
+                        "fecha_utilizacion": "No aplica",
+                        "fecha_pago": fecha_pago,
+                        "reserva_pagada": "Sí",
+                    },
+                )
                 # Envío del mensaje. Debemos pasar el template.
                 emailSender = EmailMessage(
                     subject,
@@ -2311,7 +2745,9 @@ def pago_debito_solo_reserva(request):
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(settings.BASE_DIR, 'BOLETA_PDF_PACIENTES')
+                carpeta_destino = os.path.join(
+                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                )
 
                 # Verificar si la carpeta existe, si no, la creamos
                 if not os.path.exists(carpeta_destino):
@@ -2323,33 +2759,40 @@ def pago_debito_solo_reserva(request):
 
                 # 4. Configuración de pdfkit (Detección de Sistema Operativo)
                 # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == 'nt':  # Si es Windows
-                    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+                if os.name == "nt":  # Si es Windows
+                    path_wkhtmltopdf = (
+                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    )
                     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
                 else:  # Si es Linux (PythonAnywhere)
                     config = pdfkit.configuration()
 
-                options = {'enable-local-file-access': None}
+                options = {"enable-local-file-access": None}
 
                 # 5. Generar el PDF usando la ruta dinámica universal
                 # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(template, ruta_final_pdf, configuration=config, options=options)
+                pdfkit.from_string(
+                    template, ruta_final_pdf, configuration=config, options=options
+                )
 
                 # 6. Envío del mensaje adjuntando el archivo
                 # Usamos la misma variable dinámica para asegurar que encuentre el archivo
                 emailSender.attach_file(ruta_final_pdf)
                 emailSender.send()
 
-            return Response({'reserva_pagada': reserva_uuid},
-                            # Específicamos el status.
-                            status=status.HTTP_200_OK)
+            return Response(
+                {"reserva_pagada": reserva_uuid},
+                # Específicamos el status.
+                status=status.HTTP_200_OK,
+            )
 
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)
+
 
 # Pagar la reserva esto es cuando la secretaria realiza la reserva del paciente, por ende, no fue pagada esa reserva.
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def pago_credito_solo_reserva(request):
     try:
@@ -2359,8 +2802,7 @@ def pago_credito_solo_reserva(request):
         cant_cuotas = data.get("cuota")
         # Validar que existe el código
         if not reserva_uuid:
-            return Response({'error': 0},
-                           status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": 0}, status=status.HTTP_400_BAD_REQUEST)
         # Buscar la reserva
         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
 
@@ -2372,7 +2814,11 @@ def pago_credito_solo_reserva(request):
         reserva.save()
         print("Pasamos")
         # Datos para insertar en el tabla débito.
-        monto = int(Especialidad.objects.get(nombre_especialidad=reserva.especialidad).valor_especialidad)
+        monto = int(
+            Especialidad.objects.get(
+                nombre_especialidad=reserva.especialidad
+            ).valor_especialidad
+        )
         num_cuotas = int(cant_cuotas)
         # Calculamos la cuota base redondeada
         monto_cuotas_base = int(round(monto / num_cuotas))
@@ -2380,20 +2826,22 @@ def pago_credito_solo_reserva(request):
         suma_cuotas_anteriores = monto_cuotas_base * (num_cuotas - 1)
         # La última cuota absorbe la diferencia (positiva o negativa)
         ultima_cuota = monto - suma_cuotas_anteriores
-        monto_total = Especialidad.objects.get(nombre_especialidad=reserva.especialidad).valor_especialidad
+        monto_total = Especialidad.objects.get(
+            nombre_especialidad=reserva.especialidad
+        ).valor_especialidad
         credito_uuid = str(uuid.uuid4())
-        fecha_pago = datetime.now().strftime('%Y-%m-%d')
+        fecha_pago = datetime.now().strftime("%Y-%m-%d")
         fk_reserva = reserva.id
         #
         credito = {
-            'credito': 1,
-            'fecha_pago': fecha_pago,
-            'credito_uuid': credito_uuid,
-            'monto': monto,
-            'cant_cuotas': cant_cuotas,
-            'monto_total': monto_total,
-            'monto_cuotas': monto_cuotas_base,
-            'fk_reserva': fk_reserva,
+            "credito": 1,
+            "fecha_pago": fecha_pago,
+            "credito_uuid": credito_uuid,
+            "monto": monto,
+            "cant_cuotas": cant_cuotas,
+            "monto_total": monto_total,
+            "monto_cuotas": monto_cuotas_base,
+            "fk_reserva": fk_reserva,
         }
         print(credito)
         # Insertamoslos datos en la tabla Crédito.
@@ -2406,37 +2854,56 @@ def pago_credito_solo_reserva(request):
                 print("Paciente Registrado.")
                 usuario = CustomersUsers.objects.get(id=reserva.fk_usuario.id)
                 obtener_paciente = PacienteModel.objects.get(fk_user=usuario.id)
-                nombre_paciente = obtener_paciente.primer_nombre + " " + obtener_paciente.segundo_nombre + " " + obtener_paciente.ap_paterno+ " " + obtener_paciente.ap_materno
-                nombre_archivo_paciente = obtener_paciente.primer_nombre + "_" + obtener_paciente.segundo_nombre + "_" + obtener_paciente.ap_paterno+ "_" + obtener_paciente.ap_materno
+                nombre_paciente = (
+                    obtener_paciente.primer_nombre
+                    + " "
+                    + obtener_paciente.segundo_nombre
+                    + " "
+                    + obtener_paciente.ap_paterno
+                    + " "
+                    + obtener_paciente.ap_materno
+                )
+                nombre_archivo_paciente = (
+                    obtener_paciente.primer_nombre
+                    + "_"
+                    + obtener_paciente.segundo_nombre
+                    + "_"
+                    + obtener_paciente.ap_paterno
+                    + "_"
+                    + obtener_paciente.ap_materno
+                )
                 # Creación del correo.
                 subject = "Correo Reserva Pagada"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/boleta_pago_cod_reserva.html",{
-                    'nombre_paciente': nombre_paciente,
-                    'rut_paciente': obtener_paciente.rut,
-                    'email_paciente': usuario.email,
-                    'fono_paciente': obtener_paciente.fono,
-                    'fecha_reserva':reserva.fecha_reserva,
-                    'especialidad': reserva.especialidad,
-                    'nombre_doctor': reserva.nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': reserva.comuna_clinica,
-                    'direccion_clinica': reserva.direccion_clinica,
-                    'nombre_clinica': reserva.nombre_clinica,
-                    'hora_inicio': reserva.hora_inicio,
-                    'hora_termino': reserva.hora_termino,
-                    'fecha_creacion_reserva': reserva.fecha_creacion_reserva,
-                    'tipo_pago': 'Crédito',
-                    'credito_uuid': credito_uuid,
-                    'valor_especialidad': monto_total,
-                    'total_pagar':monto_total,
-                    'cant_cuotas': cant_cuotas,
-                    'monto_cuotas': monto_cuotas_base,
-                    'descuento': "No aplica",
-                    'fecha_utilizacion': "No aplica",
-                    'fecha_pago': fecha_pago,
-                    'reserva_pagada': 'Sí',
-                })
+                template = render_to_string(
+                    "pacientes/boleta_pago_cod_reserva.html",
+                    {
+                        "nombre_paciente": nombre_paciente,
+                        "rut_paciente": obtener_paciente.rut,
+                        "email_paciente": usuario.email,
+                        "fono_paciente": obtener_paciente.fono,
+                        "fecha_reserva": reserva.fecha_reserva,
+                        "especialidad": reserva.especialidad,
+                        "nombre_doctor": reserva.nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": reserva.comuna_clinica,
+                        "direccion_clinica": reserva.direccion_clinica,
+                        "nombre_clinica": reserva.nombre_clinica,
+                        "hora_inicio": reserva.hora_inicio,
+                        "hora_termino": reserva.hora_termino,
+                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                        "tipo_pago": "Crédito",
+                        "credito_uuid": credito_uuid,
+                        "valor_especialidad": monto_total,
+                        "total_pagar": monto_total,
+                        "cant_cuotas": cant_cuotas,
+                        "monto_cuotas": monto_cuotas_base,
+                        "descuento": "No aplica",
+                        "fecha_utilizacion": "No aplica",
+                        "fecha_pago": fecha_pago,
+                        "reserva_pagada": "Sí",
+                    },
+                )
                 # Envío del mensaje. Debemos pasar el template.
                 emailSender = EmailMessage(
                     subject,
@@ -2450,7 +2917,9 @@ def pago_credito_solo_reserva(request):
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(settings.BASE_DIR, 'BOLETA_PDF_PACIENTES')
+                carpeta_destino = os.path.join(
+                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                )
 
                 # Verificar si la carpeta existe, si no, la creamos
                 if not os.path.exists(carpeta_destino):
@@ -2462,17 +2931,21 @@ def pago_credito_solo_reserva(request):
 
                 # Configuración de pdfkit (Detección de Sistema Operativo)
                 # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == 'nt':  # Si es Windows
-                    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+                if os.name == "nt":  # Si es Windows
+                    path_wkhtmltopdf = (
+                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    )
                     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
                 else:  # Si es Linux (PythonAnywhere)
                     config = pdfkit.configuration()
 
-                options = {'enable-local-file-access': None}
+                options = {"enable-local-file-access": None}
 
                 # Generar el PDF usando la ruta dinámica.
                 # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(template, ruta_final_pdf, configuration=config, options=options)
+                pdfkit.from_string(
+                    template, ruta_final_pdf, configuration=config, options=options
+                )
 
                 # Envío del mensaje adjuntando el archivo
                 # Usamos la misma variable dinámica para asegurar que encuentre el archivo
@@ -2481,40 +2954,61 @@ def pago_credito_solo_reserva(request):
             # Datos del paciente NO registrado.
             if reserva.fk_pac_no_register is not None:
                 print("Ingresamos al Paciente No Registrado.")
-                obtener_paciente = PacienteNoRegisterModel.objects.get(id=reserva.fk_pac_no_register.id)
-                nombre_paciente = obtener_paciente.primer_nombre + " " + obtener_paciente.segundo_nombre + " " + obtener_paciente.ap_paterno+ " " + obtener_paciente.ap_materno
-                nombre_archivo_paciente = obtener_paciente.primer_nombre + "_" + obtener_paciente.segundo_nombre + "_" + obtener_paciente.ap_paterno + "_" + obtener_paciente.ap_materno
+                obtener_paciente = PacienteNoRegisterModel.objects.get(
+                    id=reserva.fk_pac_no_register.id
+                )
+                nombre_paciente = (
+                    obtener_paciente.primer_nombre
+                    + " "
+                    + obtener_paciente.segundo_nombre
+                    + " "
+                    + obtener_paciente.ap_paterno
+                    + " "
+                    + obtener_paciente.ap_materno
+                )
+                nombre_archivo_paciente = (
+                    obtener_paciente.primer_nombre
+                    + "_"
+                    + obtener_paciente.segundo_nombre
+                    + "_"
+                    + obtener_paciente.ap_paterno
+                    + "_"
+                    + obtener_paciente.ap_materno
+                )
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # Creación del correo.
                 subject = "Correo Reserva Pagada"
                 # Crearemos el envío de correos.
-                template = render_to_string("pacientes/boleta_pago_cod_reserva.html",{
-                    'nombre_paciente': nombre_paciente,
-                    'rut_paciente': obtener_paciente.rut,
-                    'email_paciente': obtener_paciente.email,
-                    'fono_paciente': obtener_paciente.fono,
-                    'fecha_reserva':reserva.fecha_reserva,
-                    'especialidad': reserva.especialidad,
-                    'nombre_doctor': reserva.nombre_doctor,
-                    'reserva_uuid': reserva_uuid,
-                    'comuna_clinica': reserva.comuna_clinica,
-                    'direccion_clinica': reserva.direccion_clinica,
-                    'nombre_clinica': reserva.nombre_clinica,
-                    'hora_inicio': reserva.hora_inicio,
-                    'hora_termino': reserva.hora_termino,
-                    'fecha_creacion_reserva': reserva.fecha_creacion_reserva,
-                    'tipo_pago': 'Crédito',
-                    'credito_uuid': credito_uuid,
-                    'valor_especialidad': monto_total,
-                    'total_pagar':monto_total,
-                    'cant_cuotas': cant_cuotas,
-                    'monto_cuotas': monto_cuotas_base,
-                    'descuento': "No aplica",
-                    'fecha_utilizacion': "No aplica",
-                    'fecha_pago': fecha_pago,
-                    'reserva_pagada': 'Sí',
-                })
+                template = render_to_string(
+                    "pacientes/boleta_pago_cod_reserva.html",
+                    {
+                        "nombre_paciente": nombre_paciente,
+                        "rut_paciente": obtener_paciente.rut,
+                        "email_paciente": obtener_paciente.email,
+                        "fono_paciente": obtener_paciente.fono,
+                        "fecha_reserva": reserva.fecha_reserva,
+                        "especialidad": reserva.especialidad,
+                        "nombre_doctor": reserva.nombre_doctor,
+                        "reserva_uuid": reserva_uuid,
+                        "comuna_clinica": reserva.comuna_clinica,
+                        "direccion_clinica": reserva.direccion_clinica,
+                        "nombre_clinica": reserva.nombre_clinica,
+                        "hora_inicio": reserva.hora_inicio,
+                        "hora_termino": reserva.hora_termino,
+                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                        "tipo_pago": "Crédito",
+                        "credito_uuid": credito_uuid,
+                        "valor_especialidad": monto_total,
+                        "total_pagar": monto_total,
+                        "cant_cuotas": cant_cuotas,
+                        "monto_cuotas": monto_cuotas_base,
+                        "descuento": "No aplica",
+                        "fecha_utilizacion": "No aplica",
+                        "fecha_pago": fecha_pago,
+                        "reserva_pagada": "Sí",
+                    },
+                )
                 # Envío del mensaje. Debemos pasar el template.
                 emailSender = EmailMessage(
                     subject,
@@ -2528,7 +3022,9 @@ def pago_credito_solo_reserva(request):
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(settings.BASE_DIR, 'BOLETA_PDF_PACIENTES')
+                carpeta_destino = os.path.join(
+                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                )
 
                 # Verificar si la carpeta existe, si no, la creamos
                 if not os.path.exists(carpeta_destino):
@@ -2540,30 +3036,38 @@ def pago_credito_solo_reserva(request):
 
                 # 4. Configuración de pdfkit (Detección de Sistema Operativo)
                 # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == 'nt':  # Si es Windows
-                    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+                if os.name == "nt":  # Si es Windows
+                    path_wkhtmltopdf = (
+                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                    )
                     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
                 else:  # Si es Linux (PythonAnywhere)
                     config = pdfkit.configuration()
 
-                options = {'enable-local-file-access': None}
+                options = {"enable-local-file-access": None}
 
                 # 5. Generar el PDF usando la ruta dinámica universal
                 # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(template, ruta_final_pdf, configuration=config, options=options)
+                pdfkit.from_string(
+                    template, ruta_final_pdf, configuration=config, options=options
+                )
 
                 # 6. Envío del mensaje adjuntando el archivo
                 # Usamos la misma variable dinámica para asegurar que encuentre el archivo
                 emailSender.attach_file(ruta_final_pdf)
                 emailSender.send()
 
-            return Response({'reserva_pagada': reserva_uuid},
-                            # Específicamos el status.
-                            status=status.HTTP_200_OK)
+            return Response(
+                {"reserva_pagada": reserva_uuid},
+                # Específicamos el status.
+                status=status.HTTP_200_OK,
+            )
         else:
-            return Response({'error': 1},
-                            # Específicamos el status.
-                            status=status.HTTP_200_OK)
+            return Response(
+                {"error": 1},
+                # Específicamos el status.
+                status=status.HTTP_200_OK,
+            )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
-        return Response({'error': 0}, status=400)
+        return Response({"error": 0}, status=400)

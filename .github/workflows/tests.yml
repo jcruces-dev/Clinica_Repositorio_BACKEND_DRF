@@ -1,0 +1,90 @@
+# Nombre del workflow reutilizable
+name: Reusable Pytest Workflow
+
+# 👇 LA MAGIA: Esto permite que otros workflows lo importen y lo usen
+on:
+  workflow_call:
+
+# Define los trabajos (jobs) que se ejecutarán.
+jobs:
+  run-tests:
+    # Nombre visible del trabajo en la interfaz de GitHub.
+    name: Run Pytest
+    # Sistema operativo de la máquina virtual (Ubuntu más reciente).
+    runs-on: ubuntu-latest
+    
+    # Levantamos la base de datos PostgreSQL temporal para las pruebas.
+    services:
+      postgres:
+        # Imagen oficial de PostgreSQL versión 15.
+        image: postgres:15
+        # Variables de entorno requeridas para inicializar la base de datos.
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 1234
+          POSTGRES_DB: clinica_test
+        # Mapeo de puertos para conectar desde Django.
+        ports:
+          - 5432:5432
+        # Healthcheck: Verifica que Postgres esté listo antes de correr los tests.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # Pasos secuenciales del job.
+    steps:
+      # Paso 1: Descarga el código del repositorio.
+      - name: Checkout código
+        uses: actions/checkout@v4
+        
+      # Paso 2: Configura el entorno de Python 3.13.
+      - name: Configurar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # Paso 3: (Opcional) Verifica que Python y Pip estén listos.
+      - name: Verificar entorno Python
+        run: |
+          # Imprime la versión de Python instalada.
+          python --version
+          # Imprime la versión de Pip.
+          pip --version
+
+      # Paso 4: Instala las dependencias de Python (Pytest, Mock, etc.).
+      - name: Instalar dependencias Python
+        run: |
+          # Actualiza pip a su última versión.
+          python -m pip install --upgrade pip
+          # Instala las librerías del archivo requirements-dev.txt.
+          # (Como usas psycopg2-binary, no requiere compiladores del sistema).
+          pip install -r Clinica_DRF/requirements-dev.txt
+          
+      # Paso 5: Ejecuta la suite de pruebas con las variables de entorno inyectadas.
+      - name: Ejecutar Pruebas
+        env:
+          # Variables de Base de Datos (apuntando al contenedor local).
+          DB_HOST: localhost
+          DB_PORT: 5432
+          POSTGRES_DB: clinica_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 1234
+          # Variables de Django (Claves falsas solo para pruebas).
+          SECRET_KEY: 'django-insecure-clave-falsa'
+          DEBUG: 'True'
+          ALLOWED_HOSTS: '*'
+          CORS_ALLOWED_ORIGINS: 'http://localhost'
+          # Variables de Email (Falsas, no se enviarán correos reales).
+          EMAIL_BACKEND: 'django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_HOST: 'smtp.gmail.com'
+          EMAIL_PORT: '587'
+          EMAIL_USE_TLS: 'True'
+          EMAIL_HOST_USER: 'test@test.com'
+          EMAIL_HOST_PASSWORD: 'password-falso'
+          # Variable de Stripe (Falsa, los pagos están mockeados).
+          STRIPE_SECRET_KEY: 'sk_test_clave_falsa'
+        run: |
+          # Corre Pytest apuntando al archivo de configuración central.
+          pytest -v -c Clinica_DRF/pytest.ini

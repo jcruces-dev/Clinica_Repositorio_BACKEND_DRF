@@ -1,0 +1,131 @@
+# Nombre del workflow. Aparecerá en la pestaña "Actions" de GitHub.
+name: 2. CD - Deploy to Dev & Test
+
+# Define CUÁNDO se ejecuta este workflow.
+on:
+  # Se ejecuta automáticamente cuando hay un push a la rama main (ej. después de un Merge).
+  push:
+    branches: [ main ]
+  # Permite ejecutar el workflow manualmente desde la interfaz de GitHub.
+  workflow_dispatch:
+
+# Variables de entorno globales para todo el workflow.
+env:
+  # Nombre base de la imagen que se guardará en el registro de GitHub (GHCR).
+  IMAGE_NAME: ghcr.io/jcruces-dev/backend-clinica-bp
+
+# Define los trabajos (jobs) que se ejecutarán.
+jobs:
+  # ==========================================================
+  # JOB 1: Llamada al Workflow Reutilizable de Pruebas
+  # ==========================================================
+  tests:
+    # Llama al archivo centralizado 'tests.yml' que creaste para no repetir código.
+    # Esto ejecutará el job 'run-tests' que contiene Pytest.
+    uses: ./.github/workflows/tests.yml
+
+  # ==========================================================
+  # JOB 2: Construir y publicar la imagen Docker para Dev/Test
+  # ==========================================================
+  build-and-push:
+    # Nombre visible del job en la interfaz.
+    name: Build and Push (Dev/Test)
+    # Dependencia: Solo se ejecuta si el job 'tests' (el reutilizable) pasa en verde.
+    needs: tests
+    # Sistema operativo de la máquina virtual.
+    runs-on: ubuntu-latest
+    
+    # Permisos necesarios para interactuar con el registro de paquetes (GHCR).
+    permissions:
+      contents: read
+      packages: write
+      
+    # Pasos secuenciales del job.
+    steps:
+      # Paso 1: Descarga el código fuente.
+      - name: Checkout código
+        uses: actions/checkout@v4
+        
+      # Paso 2: Genera etiquetas dinámicas para la imagen (SHA, run-number y latest).
+      - name: Extraer metadatos
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # Etiqueta con el ID del commit (SHA). (Genera el tag con prefijo 'sha-', ej: sha-abc1234)
+            type=sha,format=long
+            # Etiqueta con el número de ejecución del pipeline.
+            type=raw,value=run-${{ github.run_number }}
+            # Etiqueta 'latest' (solo si se ejecuta en la rama principal).
+            type=raw,value=latest,enable={{is_default_branch}}
+            
+      # Paso 3: Inicia sesión en GitHub Container Registry.
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      # Paso 4: Construye la imagen (etapa production) y la sube al registro.
+      - name: Build y push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Usa la etapa 'production' de tu Dockerfile Multi-Etapa.
+          target: production
+          # Aplica los tags generados en el paso de metadatos.
+          tags: ${{ steps.meta.outputs.tags }}
+
+  # ==========================================================
+  # JOB 3: Actualizar manifiestos de Kubernetes (GitOps)
+  # ==========================================================
+  update-dev-test:
+    # Nombre visible del job.
+    name: Update Dev & Test Manifests
+    # Dependencia: Solo se ejecuta si la imagen se construyó y subió correctamente.
+    needs: build-and-push
+    # Sistema operativo.
+    runs-on: ubuntu-latest
+    
+    # Pasos del job.
+    steps:
+      # Paso 1: Clona el repositorio de infraestructura usando el token de acceso (PAT).
+      - name: Checkout repo de infraestructura
+        uses: actions/checkout@v4
+        with:
+          repository: jcruces-dev/clinica-k8s-infrastructure
+          token: ${{ secrets.GH_PAT }}
+          path: infra
+          
+      # Paso 2: Actualiza la imagen en los archivos YAML de Kubernetes.
+      - name: Actualizar manifiestos
+        run: |
+          # Entra a la carpeta del repositorio de infraestructura clonado.
+          cd infra
+          
+          # Agregamos el prefijo "sha-" para que coincida con la imagen real.
+          # Con esto aseguramos que encuentre la imagen en GHCR.
+          DEPLOY_TAG="sha-${{ github.sha }}"
+          
+          # Busca dinámicamente todos los archivos .yaml en Dev y Test y actualiza la imagen.
+          find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${DEPLOY_TAG}|g" {} +
+          
+      # Paso 3: Hace commit y push de los cambios en la infraestructura.
+      - name: Commit y push
+        run: |
+          # Entra a la carpeta de infraestructura.
+          cd infra
+          # Configura el usuario bot de GitHub Actions.
+          git config user.name "github-actions[bot]"
+          # Configura el email del bot.
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Prepara todos los archivos modificados.
+          git add .
+          # Hace el commit solo si hubo cambios reales (evita errores).
+          # También actualizamos el mensaje del commit para que sea consistente.
+          git diff --staged --quiet || git commit -m "Update Dev/Test image to sha-${{ github.sha }}"
+          # Empuja los cambios al repositorio de infraestructura.
+          git push
