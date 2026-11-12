@@ -45,12 +45,16 @@ ALLOWED_HOSTS = env.list(
         "127.0.0.1",
         "dev.clinica.local",
         "test.clinica.local",
+        # Estos son mis dominios reales (Sub-Dominios).
+        "dev.clinica.jair-dev.cl",
+        # Estos son mis dominios reales (Sub-Dominios).
+        "test.clinica.jair-dev.cl",
         "jacruces91.pythonanywhere.com",
     ],
 )
 # Application definition.
 # Esta es la nueva configuración que necesitamos para que funcione en la WEB.
-# Esto permite que cualquier origen pueda acceder a tu API, lo cual es útil para desarrollo
+# Esto me permite que cualquier origen pueda acceder a mi API, lo cual me sirve para desarrollo
 # y pruebas. Sin embargo, en producción,
 # es recomendable restringir los orígenes permitidos a los dominios específicos de tu aplicación.
 CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
@@ -63,6 +67,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "usuarios",
+    # Generamos el módulo de drf.
     "rest_framework",
     "corsheaders",
     # Generamos el módulo de token de drf.

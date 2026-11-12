@@ -79,22 +79,25 @@ jobs:
     # Sistema operativo.
     runs-on: ubuntu-latest
     
-    # 👇 CONFIGURACIÓN DE SEGURIDAD EMPRESARIAL 👇
     # 'environment' le dice a GitHub que use las reglas del entorno "production".
-    # Si configuras reglas en GitHub, el pipeline se pausará aquí y pedirá que un humano apruebe el despliegue.
+    # Si configuro las reglas en GitHub, el pipeline se pausará aquí y pedirá que alguien apruebe el despliegue.
+    # En este caso, yo.
     environment: production 
     
     # Pasos secuenciales del job.
     steps:
-      # Paso 1: Clona el repositorio de infraestructura usando el token (PAT).
+      # Paso 1: Clonamos el repositorio de infraestructura usando el token (PAT).
       - name: Checkout repo de infraestructura
+      # Usamos este paquete descargado del marketplace de GIT.
         uses: actions/checkout@v4
         with:
+          # Este es mi repositorio principal.
           repository: jcruces-dev/clinica-k8s-infrastructure
+          # Usamos un token personal (PAT) para tener permisos de escritura que generamos en GIT.
           token: ${{ secrets.GH_PAT }}
           path: infra
           
-      # Paso 2: Actualiza la imagen en los archivos YAML de Producción.
+      # Paso 2: ActualizaMOS la imagen en los archivos YAML de Producción.
       - name: Actualizar manifiestos de Producción
         run: |
           # Entra a la carpeta del repositorio clonado.
