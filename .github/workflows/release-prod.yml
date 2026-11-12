@@ -47,7 +47,7 @@ jobs:
     steps:
       # Paso 1: Descarga el código fuente.
       - name: Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
       # Paso 2: Inicia sesión en GitHub Container Registry (GHCR).
       - name: Login a GHCR
@@ -89,7 +89,7 @@ jobs:
       # Paso 1: Clonamos el repositorio de infraestructura usando el token (PAT).
       - name: Checkout repo de infraestructura
       # Usamos este paquete descargado del marketplace de GIT.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Este es mi repositorio principal.
           repository: jcruces-dev/clinica-k8s-infrastructure
