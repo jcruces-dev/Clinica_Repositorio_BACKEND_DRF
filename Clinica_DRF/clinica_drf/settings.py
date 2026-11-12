@@ -48,8 +48,12 @@ ALLOWED_HOSTS = env.list(
         "jacruces91.pythonanywhere.com",
     ],
 )
-# Application definition
-CORS_ALLOW_CREDENTIALS = True
+# Application definition.
+# Esta es la nueva configuración que necesitamos para que funcione en la WEB.
+# Esto permite que cualquier origen pueda acceder a tu API, lo cual es útil para desarrollo
+# y pruebas. Sin embargo, en producción,
+# es recomendable restringir los orígenes permitidos a los dominios específicos de tu aplicación.
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
