@@ -62,7 +62,7 @@ jobs:
             
       # Paso 3: Inicia sesión en GitHub Container Registry.
       - name: Login a GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
