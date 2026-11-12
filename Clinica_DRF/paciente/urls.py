@@ -2,100 +2,98 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("paciente/listar_paciente/", views.listar_paciente, name="listar_paciente"),
     path(
-        "api/paciente/listar_paciente/", views.listar_paciente, name="listar_paciente"
-    ),
-    path(
-        "api/paciente/pac_no_registrado_admin/",
+        "paciente/pac_no_registrado_admin/",
         views.pac_no_registrado_admin,
         name="pac_no_registrado_admin",
     ),
     path(
-        "api/paciente/crear_paciente_index_registrar/",
+        "paciente/crear_paciente_index_registrar/",
         views.crear_paciente_index_registrar,
         name="crear_paciente_index_registrar",
     ),
-    path("api/paciente/crear_paciente/", views.crear_paciente, name="crear_paciente"),
+    path("paciente/crear_paciente/", views.crear_paciente, name="crear_paciente"),
     path(
-        "api/paciente/update_paciente/<int:id>/",
+        "paciente/update_paciente/<int:id>/",
         views.update_paciente,
         name="update_paciente",
     ),
     path(
-        "api/paciente/delete_paciente/<int:id>/",
+        "paciente/delete_paciente/<int:id>/",
         views.delete_paciente,
         name="delete_paciente",
     ),
     path(
-        "api/paciente/reserva_paciente/",
+        "paciente/reserva_paciente/",
         views.reserva_paciente,
         name="reserva_paciente",
     ),
     path(
-        "api/paciente/historial_user_paciente/<int:id_usuario>/",
+        "paciente/historial_user_paciente/<int:id_usuario>/",
         views.historial_user_paciente,
         name="historial_user_paciente",
     ),
     path(
-        "api/paciente/reserva_paciente_registrado/",
+        "paciente/reserva_paciente_registrado/",
         views.reserva_paciente_registrado,
         name="reserva_paciente_registrado",
     ),
     path(
-        "api/paciente/crear_reserva_pac_registrado/",
+        "paciente/crear_reserva_pac_registrado/",
         views.crear_reserva_pac_registrado,
         name="crear_reserva_pac_registrado",
     ),
     path(
-        "api/paciente/historial_clinico/",
+        "paciente/historial_clinico/",
         views.historial_clinico,
         name="historial_clinico",
     ),
     path(
-        "api/paciente/update_paciente_panel_secretaria/<int:id>/",
+        "paciente/update_paciente_panel_secretaria/<int:id>/",
         views.update_paciente_panel_secretaria,
         name="update_paciente_panel_secretaria",
     ),
     path(
-        "api/paciente/listar_datos_paciente/<str:username>/",
+        "paciente/listar_datos_paciente/<str:username>/",
         views.listar_datos_paciente,
         name="listar_datos_paciente",
     ),
     path(
-        "api/paciente/update_pac_panel_pac/<int:id_user>/",
+        "paciente/update_pac_panel_pac/<int:id_user>/",
         views.update_pac_panel_pac,
         name="update_pac_panel_pac",
     ),
     path(
-        "api/paciente/res_nombre_paciente/<str:username>/",
+        "paciente/res_nombre_paciente/<str:username>/",
         views.res_nombre_paciente,
         name="res_nombre_paciente",
     ),
     path(
-        "api/paciente/reserva_paciente_panel_paciente/",
+        "paciente/reserva_paciente_panel_paciente/",
         views.reserva_paciente_panel_paciente,
         name="reserva_paciente_panel_paciente",
     ),
     path(
-        "api/paciente/crear_reserva_panel_pac/",
+        "paciente/crear_reserva_panel_pac/",
         views.crear_reserva_panel_pac,
         name="crear_reserva_panel_pac",
     ),
     # Obtener la especialidad desde el panel de PACIENTE REGISTRADO.
     path(
-        "api/paciente/esp_panel_pac_registrado/",
+        "paciente/esp_panel_pac_registrado/",
         views.esp_panel_pac_registrado,
         name="esp_panel_pac_registrado",
     ),
     # Obtener la especial
     # Reserva de cita desde el panel ADMIN.
     path(
-        "api/paciente/crear_reserva_panel_admin/",
+        "paciente/crear_reserva_panel_admin/",
         views.crear_reserva_panel_admin,
         name="crear_reserva_panel_admin",
     ),
     path(
-        "api/paciente/crear_reserva_pac_registrado_secretaria/",
+        "paciente/crear_reserva_pac_registrado_secretaria/",
         views.crear_reserva_pac_registrado_secretaria,
         name="crear_reserva_pac_registrado_secretaria",
     ),
