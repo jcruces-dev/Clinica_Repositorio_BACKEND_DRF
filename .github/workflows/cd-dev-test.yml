@@ -70,7 +70,7 @@ jobs:
           
       # Paso 4: Construye la imagen (etapa production) y la sube al registro.
       - name: Build y push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
