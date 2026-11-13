@@ -44,7 +44,7 @@ jobs:
     steps:
       # Paso 1: Descarga el código fuente.
       - name: Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         
       # Paso 2: Genera etiquetas dinámicas para la imagen (SHA, run-number y latest).
       - name: Extraer metadatos
@@ -94,7 +94,7 @@ jobs:
     steps:
       # Paso 1: Clona el repositorio de infraestructura usando el token de acceso (PAT).
       - name: Checkout repo de infraestructura
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: jcruces-dev/clinica-k8s-infrastructure
           token: ${{ secrets.GH_PAT }}
