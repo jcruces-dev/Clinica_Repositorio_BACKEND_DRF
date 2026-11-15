@@ -2,7 +2,7 @@
 # ETAPA 1: BASE (Configuraciones y dependencias del sistema compartidas)
 # ==============================================================================
 # Definimos la imagen base de Python. Usamos la misma imagen para todas las etapas.
-FROM python:3.13 AS base
+FROM python:3.15 AS base
 
 # Evita que Python genere archivos .pyc en el disco, manteniendo el contenedor limpio.
 ENV PYTHONDONTWRITEBYTECODE=1
