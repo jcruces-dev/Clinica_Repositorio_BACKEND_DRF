@@ -1,18 +1,20 @@
-# Nombre del workflow. Aparecerá en la pestaña "Actions" de GitHub.
+# Nombre del workflow que aparecerá en la pestaña "Actions" de GitHub.
 name: 3. Release to Production
 
 # Define CUÁNDO se ejecuta este workflow.
 on:
-  # 1. Se ejecuta exclusivamente cuando creas un Tag que empieza con 'v' (ej. v1.0.0).
+  # 1. Se ejecuta exclusivamente cuando subes un Tag que empieza con 'v' (ej. v1.0.0). 
+  # Esto simula el momento en que un equipo decide lanzar una nueva versión al mercado.
   push:
     tags:
       - 'v*'
-  # 2. Permite ejecutarlo manualmente desde la pestaña Actions.
+  # 2. Permite ejecutar el workflow manualmente desde la pestaña Actions (útil para pruebas).
   workflow_dispatch:
 
 # Variables de entorno globales para todo el workflow.
 env:
-  # Define el nombre base de la imagen en GitHub Container Registry (GHCR).
+  # Define el nombre base de la imagen de PRODUCCIÓN. 
+  # Nota: A diferencia del pipeline de Dev/Test, aquí NO usamos el sufijo '-dev'.
   IMAGE_NAME: ghcr.io/jcruces-dev/backend-clinica-bp
 
 # Define los trabajos (jobs) que se ejecutarán.
@@ -21,35 +23,34 @@ jobs:
   # JOB 1: Llamada al Workflow Reutilizable de Pruebas (Regresión)
   # ==========================================================
   tests:
-    # 👇 LA MAGIA DE LOS REUSABLE WORKFLOWS 👇
-    # En lugar de escribir 50 líneas para levantar Postgres y correr Pytest,
-    # simplemente llamamos al archivo central. Esto garantiza que SIEMPRE 
-    # se corran las pruebas de regresión antes de ir a Producción.
+    # En lugar de escribir 50 líneas para correr Pytest, llamamos al archivo central.
+    # Esto garantiza que SIEMPRE se corran las pruebas antes de tocar Producción.
     uses: ./.github/workflows/tests.yml
 
   # ==========================================================
   # JOB 2: Construir la imagen con versión semántica (v1.0.0)
   # ==========================================================
   build-release:
-    # Nombre visible del job.
+    # Nombre visible del job en la interfaz de GitHub.
     name: Build Production Image
-    # Dependencia: Solo se ejecuta si el job 'tests' (el reutilizable) pasa en verde.
+    # Dependencia: Solo se ejecuta si el job 'tests' pasa en verde. 
+    # Si un test falla, el despliegue a producción se cancela automáticamente.
     needs: tests 
-    # Sistema operativo de la máquina virtual.
+    # Sistema operativo de la máquina virtual donde correrá el pipeline.
     runs-on: ubuntu-latest
     
-    # Permisos necesarios para subir la imagen a GHCR.
+    # Permisos necesarios para interactuar con el registro de paquetes (GHCR).
     permissions:
       contents: read
       packages: write
       
     # Pasos secuenciales del job.
     steps:
-      # Paso 1: Descarga el código fuente.
+      # Paso 1: Descarga el código fuente del repositorio en la máquina virtual.
       - name: Checkout código
         uses: actions/checkout@v7
         
-      # Paso 2: Inicia sesión en GitHub Container Registry (GHCR).
+      # Paso 2: Inicia sesión en GitHub Container Registry (GHCR) para poder subir imágenes.
       - name: Login a GHCR
         uses: docker/login-action@v4
         with:
@@ -63,9 +64,10 @@ jobs:
         with:
           context: .
           push: true
-          # Usa la etapa 'production' de tu Dockerfile Multi-Etapa.
+          # Usa la etapa 'production' de tu Dockerfile Multi-Etapa (la limpia y ligera).
           target: production
-          # 👇 Aquí le decimos que etiquete la imagen con el nombre del Tag de Git (ej. v1.0.0).
+          # Aquí le decimos que etiquete la imagen con el nombre del Tag de Git. 
+          # github.ref_name captura el nombre del tag que subiste (ej: v1.0.0).
           tags: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
 
   # ==========================================================
@@ -80,44 +82,52 @@ jobs:
     runs-on: ubuntu-latest
     
     # 'environment' le dice a GitHub que use las reglas del entorno "production".
-    # Si configuro las reglas en GitHub, el pipeline se pausará aquí y pedirá que alguien apruebe el despliegue.
-    # En este caso, yo.
+    # Al configurar esto en GitHub, el pipeline se pausará aquí y pedirá aprobación manual.
+    # Esto es una capa de seguridad vital para evitar despliegues accidentales a Prod.
     environment: production 
     
     # Pasos secuenciales del job.
     steps:
-      # Paso 1: Clonamos el repositorio de infraestructura usando el token (PAT).
+      # Paso 1: Clonamos el repositorio de infraestructura usando el token de acceso (PAT).
       - name: Checkout repo de infraestructura
-      # Usamos este paquete descargado del marketplace de GIT.
         uses: actions/checkout@v7
         with:
-          # Este es mi repositorio principal.
+          # Especificamos el repositorio de infraestructura (donde viven los YAMLs).
           repository: jcruces-dev/clinica-k8s-infrastructure
-          # Usamos un token personal (PAT) para tener permisos de escritura que generamos en GIT.
+          # Usamos un token personal (PAT) para tener permisos de escritura.
           token: ${{ secrets.GH_PAT }}
+          # Descargamos el repo dentro de una carpeta llamada 'infra'.
           path: infra
           
-      # Paso 2: ActualizaMOS la imagen en los archivos YAML de Producción.
+      # Paso 2: Actualiza la imagen en los archivos YAML de Producción.
       - name: Actualizar manifiestos de Producción
         run: |
-          # Entra a la carpeta del repositorio clonado.
+          # Entra a la carpeta del repositorio de infraestructura clonado.
           cd infra
-          # Define el tag de versión (ej. v1.0.0) para inyectarlo en los YAMLs.
+          
+          # Define el tag de versión (ej. v1.0.0) que acabamos de construir.
           DEPLOY_TAG="${{ github.ref_name }}"
-          # Busca en la carpeta 'Prod' todos los archivos .yaml y actualiza la imagen.
-          find Prod -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${DEPLOY_TAG}|g" {} +
+          
+          # Busca en la carpeta 'Prod' todos los archivos .yaml.
+          # El comando sed reemplaza la imagen antigua por la nueva con el tag semántico.
+          # La regex '[^:]*' asegura que no se confunda si el archivo tenía un '-dev' accidental.
+          find Prod -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp[^:]*:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp:${DEPLOY_TAG}|g" {} +
           
       # Paso 3: Hace commit y push de los cambios a la infraestructura.
       - name: Commit y push
         run: |
           # Entra a la carpeta de infraestructura.
           cd infra
-          # Configura el bot de GitHub Actions.
+          
+          # Configura el usuario bot de GitHub Actions (para que quede registro de quién hizo el cambio).
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Prepara los archivos modificados.
+          
+          # Prepara los archivos modificados en la carpeta Prod.
           git add Prod/
-          # Hace el commit solo si hubo cambios.
+          
+          # Hace el commit solo si hubo cambios reales (evita errores si el YAML ya estaba actualizado).
           git diff --staged --quiet || git commit -m "Update PROD image to ${{ github.ref_name }}"
-          # Empuja los cambios al repositorio.
+          
+          # Empuja los cambios al repositorio de infraestructura.
           git push
