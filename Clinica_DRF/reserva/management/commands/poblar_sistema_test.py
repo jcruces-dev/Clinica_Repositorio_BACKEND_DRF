@@ -35,7 +35,7 @@ from historial_pac_no_registrado.models import HistorialPacNoRegistradoModel
 
 # Este es un PROVIDERS, para crear el diagnostico, síntoma y observación con una lista COHERENTE que tenemos
 # en el archivo que se encuentra en la carpeta, utils->providers.py, con esto creamos los datos coherentes con Faker.
-from Clinica_DRF.utils.providers import fake
+from utils.providers import fake
 
 # Esto nos permite redondear siempre hacia arriba y no hacia abajo. (Cuotas).
 import math
