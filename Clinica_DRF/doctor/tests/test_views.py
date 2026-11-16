@@ -41,7 +41,8 @@ def test_dashboard_doctor_query_optimization(
     crear_paciente,
     crear_clinica,
     crear_especialidad,
-    django_assert_num_queries,  # 👈 ¡EL PARÁMETRO MÁGICO AQUÍ!
+    # ¡EL PARÁMETRO MÁGICO AQUÍ!
+    django_assert_num_queries,
 ):
     """
     Prueba que el dashboard del doctor no haga consultas N+1 a la BD.
@@ -66,8 +67,7 @@ def test_dashboard_doctor_query_optimization(
         fk_usuario=crear_paciente.fk_user,
     )
 
-    # 2. Aquí entra la magia del rendimiento
-    # (Nota: El número 5 es una suposición. Si falla, el log te dirá el número real).
+    # (Nota: El número 5 es una suposición. Si falla, el log dirá el número real).
     with django_assert_num_queries(5):
         client = APIClient()
         client.force_authenticate(user=crear_doctor_completo.fk_user)
