@@ -16,7 +16,7 @@ urlpatterns = [
         name="nueva_esp_doctor_admin",
     ),
     path(
-        "doctor/borrar_esp_doctor/<int:id>/",
+        "doctor/borrar_esp_doctor/<int:id_doctor>/",
         views.borrar_esp_doctor,
         name="borrar_esp_doctor",
     ),
@@ -41,7 +41,7 @@ urlpatterns = [
         name="doctor_nueva_clinica",
     ),
     path(
-        "doctor/delete_clinica_doctor/<int:id>/",
+        "doctor/delete_clinica_doctor/<int:id_doctor>/",
         views.delete_clinica_doctor,
         name="delete_clinica_doctor",
     ),

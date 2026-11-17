@@ -9,6 +9,11 @@ urlpatterns = [
         name="pac_no_registrado_admin",
     ),
     path(
+        "paciente/pac_no_registrado_secretaria/",
+        views.pac_no_registrado_secretaria,
+        name="pac_no_registrado_secretaria",
+    ),
+    path(
         "paciente/crear_paciente_index_registrar/",
         views.crear_paciente_index_registrar,
         name="crear_paciente_index_registrar",
