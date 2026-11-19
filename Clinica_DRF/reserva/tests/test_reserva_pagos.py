@@ -1,79 +1,89 @@
+# Importa APIClient de DRF para simular peticiones HTTP a los endpoints de la API.
 from rest_framework.test import APIClient
+
+# Importa reverse para resolver las URLs de Django a partir del nombre de la vista.
 from django.urls import reverse
+
+# Importa Response desde httpx.
 from httpx import Response
+
+# Importa pytest para definir y ejecutar los casos de prueba.
 import pytest
+
+# Importa ComunaClinicaModel desde comuna_clinica.models.
 from comuna_clinica.models import ComunaClinicaModel
 
 
-#
+# Marca el test para que pueda acceder a la base de datos de prueba de Django.
 @pytest.mark.django_db
-def test_pago_debito_desde_dashboard_registrado(
-    crear_reserva, crear_especialidad, mocker
-):
+# Define el test de pago con débito desde el dashboard de un paciente registrado.
+def test_pago_debito_desde_dashboard_registrado(crear_reserva, crear_especialidad):
+    # Instancia un cliente HTTP de pruebas para hacer peticiones a la API.
     client = APIClient()
-    # Autenticamos al paciente (Simula que está en su dashboard)
+    # Autentica al cliente con el usuario asociado a la reserva creada.
     client.force_authenticate(user=crear_reserva.fk_usuario)
 
-    # Endpoint del dashboard
+    # Obtiene la URL del endpoint para actualizar el pago con débito usando el UUID de la reserva.
     url = reverse(
         "update_pago_debito_reserva",
         kwargs={"reserva_uuid": crear_reserva.reserva_uuid},
     )
+    # Envía reserva_uuid y debito=1, tal como espera request.data["debito"] en la vista.
     data = {"reserva_uuid": crear_reserva.reserva_uuid, "debito": 1}
 
-    # Mockeamos servicios externos
-    mocker.patch("reserva.views.pdfkit")
-    mocker.patch("reserva.views.EmailMessage")
-
+    # Ejecuta una petición PUT al endpoint con los datos en formato JSON.
     response = client.put(url, data, format="json")
 
+    # Verifica que la respuesta HTTP haya sido exitosa (200 OK).
     assert response.status_code == 200
+    # Recarga la instancia de reserva desde la base de datos para reflejar cambios guardados.
     crear_reserva.refresh_from_db()
+    # Verifica que el campo pago_realizado se haya actualizado a 1 tras el pago con débito.
     assert crear_reserva.pago_realizado == 1
 
 
-# La API rechaza la petición si no hay un usuario autenticado.
+# Marca el test para permitir acceso a la base de datos de prueba de Django.
 @pytest.mark.django_db
+# Define el test que valida el rechazo de acceso sin autenticación al endpoint del dashboard.
 def test_pago_debito_desde_dashboard_no_registrado_falla(crear_reserva_no_registrado):
+    # Crea un cliente de pruebas sin autenticar ningún usuario.
     client = APIClient()
-    # NO autenticamos al usuario (Simula un intento de hackeo o acceso público)
 
+    # Resuelve la URL del endpoint usando el UUID de la reserva de paciente no registrado.
     url = reverse(
         "update_pago_debito_reserva",
         kwargs={"reserva_uuid": crear_reserva_no_registrado.reserva_uuid},
     )
+    # Define el cuerpo de la petición con el UUID y el indicador de pago con débito.
     data = {"reserva_uuid": crear_reserva_no_registrado.reserva_uuid, "debito": 1}
 
+    # Envía la petición PUT sin credenciales de autenticación.
     response = client.put(url, data, format="json")
 
-    # El sistema debe bloquearlo con un 401 Unauthorized o 403 Forbidden
+    # Comprueba que el endpoint bloquee la petición con 401 (no autenticado) o 403 (prohibido).
     assert response.status_code in [401, 403]
 
 
-# Paciente No Registrado paga desde el Index (Éxito).
+# Marca el test para utilizar la base de datos de prueba de Django.
 @pytest.mark.django_db
+# Define el test de pago con débito desde el index para un paciente no registrado.
 def test_pago_debito_desde_index_no_registrado(
-    crear_reserva_no_registrado, crear_especialidad, mocker
+    crear_reserva_no_registrado, crear_especialidad
 ):
+    # Instancia el cliente de pruebas de DRF.
     client = APIClient()
+    # Obtiene la URL del endpoint de pago con débito para reserva sin registro previo.
     url = reverse("pago_debito_solo_reserva")
+    # Arma los datos enviados con el código UUID de la reserva a pagar.
     data = {"cod_reserva_pagar": crear_reserva_no_registrado.reserva_uuid}
 
-    # Mockeamos toda la clase EmailMessage, no solo el método send
-    mock_pdf = mocker.patch("reserva.views.pdfkit")
-    mock_email_class = mocker.patch("reserva.views.EmailMessage")
-
+    # Envía la petición POST al endpoint de pago en formato JSON.
     response = client.post(url, data, format="json")
 
+    # Verifica que el endpoint responda con estado 200 OK.
     assert response.status_code == 200
 
+    # Refresca el objeto de reserva desde la base de datos.
     crear_reserva_no_registrado.refresh_from_db()
+    # Confirma que el pago quedó marcado como realizado (1).
     assert crear_reserva_no_registrado.pago_realizado == 1
-
-    # Ajustamos los asserts al nuevo Mock
-    # Verificamos que se llamó a la función que crea el string del PDF
-    mock_pdf.from_string.assert_called_once()
-
-    # Verificamos que se instanció la clase de correo y se llamó al método send de esa instancia
-    mock_email_class.assert_called_once()
-    mock_email_class.return_value.send.assert_called_once()

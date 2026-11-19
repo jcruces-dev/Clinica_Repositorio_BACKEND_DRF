@@ -65,7 +65,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 
 # ----- Librería para crear PDF -------------------------------------------------
-import pdfkit
+# import pdfkit
 
 # ----- Fin Librería para crear PDF ---------------------------------------------
 

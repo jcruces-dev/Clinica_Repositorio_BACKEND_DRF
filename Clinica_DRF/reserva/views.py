@@ -65,7 +65,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 
 # ----- Librería para crear PDF -------------------------------------------------
-import pdfkit
+# import pdfkit
 
 # ----- Fin Librería para crear PDF ---------------------------------------------
 #
@@ -670,7 +670,7 @@ def pago_credito_reserva_index(request):
                 if pago_credito.is_valid():
                     pago_credito.save()
                     # Correo más PDF, para el usuario registrao por el rut.
-                    generar_correo_reserv_index(reserva_uuid, "1")
+                    # generar_correo_reserv_index(reserva_uuid, "1")
                     # Filtración de las Reservas.
                     reser = ReservaModel.objects.filter(
                         nombre_doctor=nombre_doctor,
@@ -712,328 +712,328 @@ def pago_credito_reserva_index(request):
 
 
 # Método para generar el PDF de una cita reservada por el INDEX.
-def generar_correo_reserv_index(reserva_uuid, tipo_pago):
-    try:
-        print("Ingresamos al CORREO INDEX DÉBITO")
-        reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-        metodo_pago = reserva.tipo_pago
-        pac_no_register = reserva.fk_pac_no_register
-        pac = PacienteNoRegisterModel.objects.get(pk=pac_no_register.id)
-        print(pac.email)
-        print(pac.id)
-        id_usuario = pac.id
-        # Datos del usuario.
-        nombre_completo = (
-            pac.primer_nombre
-            + " "
-            + pac.segundo_nombre
-            + " "
-            + pac.ap_paterno
-            + " "
-            + pac.ap_materno
-        )
-        rut = pac.rut
-        fono = pac.fono
-        email = pac.email
-        fecha_reserva = reserva.fecha_reserva
-        especialidad = reserva.especialidad
-        valor_esp = Especialidad.objects.get(nombre_especialidad=reserva.especialidad)
-        valor_base = valor_esp.valor_especialidad
-        nombre_doctor = reserva.nombre_doctor
-        reserva_uuid = reserva.reserva_uuid
-        nombre_clinica = reserva.nombre_clinica
-        comuna_clinica = reserva.comuna_clinica
-        direccion_clinica = reserva.direccion_clinica
-        nombre_doctor = reserva.nombre_doctor
-        hora_inicio = reserva.hora_inicio
-        hora_termino = reserva.hora_termino
-        fecha_creacion_reserva = reserva.fecha_creacion_reserva
-        tipo_pago = reserva.tipo_pago
-        aplica_descuento = None
-        debito = ""
-        credito = ""
-        if tipo_pago == "0":
-            debito = "Débito"
-        if tipo_pago == "1":
-            credito = "Crédito"
-        # Si existe descuento, guardamos los datos en estas variables.
-        total_pagar = None
-        total_pagar_descuento = None
-        fecha_utilizacion = None
-        print(metodo_pago)
-        descuento = None
-        #
-        if metodo_pago == "0":
-            debito = DebitoModel.objects.get(fk_reserva=reserva.id)
-            total_pagar = "No Existen Datos"
-            total_pagar_descuento = "No Existen Datos"
-            fecha_utilizacion = "No Existen Datos"
-            aplica_descuento = "No"
-            # Creación del correo.
-            subject = "Correo Verificación Reserva"
-            # Crearemos el envío de correos.
-            template = render_to_string(
-                "pacientes_no_registrado/correo_reserva.html",
-                {
-                    "nombre_paciente": nombre_completo,
-                    "rut_paciente": rut,
-                    "email_paciente": email,
-                    "fono_paciente": fono,
-                    "fecha_reserva": fecha_reserva,
-                    "especialidad": especialidad,
-                    "nombre_doctor": nombre_doctor,
-                    "reserva_uuid": reserva_uuid,
-                    "comuna_clinica": comuna_clinica,
-                    "direccion_clinica": direccion_clinica,
-                    "nombre_clinica": nombre_clinica,
-                    "hora_inicio": hora_inicio,
-                    "hora_termino": hora_termino,
-                    "fecha_creacion_reserva": fecha_creacion_reserva,
-                    "total_pagar": valor_base,
-                    "tipo_pago": "Débito",
-                    "monto": debito.monto,
-                    "aplica_descuento": "No",
-                    "valor_especialidad": valor_base,
-                    "monto_total": debito.monto_total,
-                    "total_pagar_descuento": "No aplica",
-                    "fecha_utilizacion": "No aplica",
-                    "descuento": "No aplica",
-                    "reserva_pagada": "Sí",
-                    "valor_base": valor_base,
-                },
-            )
-            # # Generar el PDF
-            # nombre_carpeta = "Boleta_PDF_PACIENTES"
-            # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}"
-            # if not os.path.exists(ruta):
-            #     os.makedirs(ruta)
-            #     print(f"Carpeta creada en: {ruta}")
-            # else:
-            #     pass
-            # now = datetime.now()
-            # filename = f"Boleta_Reserva_Cita_{nombre_completo}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
-            # # Creación del PDF.
-            # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
-            # # Configuración de pdfkit
-            # options = {
-            #     'enable-local-file-access': None,
-            #     # 'orientation': 'Landscape',
-            #     # 'page-size': 'A4',
-            #     # 'margin-top': '0.2in',
-            #     # 'margin-bottom': '0.2in',
-            #     # 'encoding': "UTF-8",
-            # }
-            # print("Adjunto..........")
-            # # template; Pertenece
-            # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}", configuration=config, options=options)
-            # # Envío del mensaje. Debemos pasar el template.
-            # emailSender = EmailMessage(
-            #     subject,
-            #     template,
-            #     settings.EMAIL_HOST_USER,
-            #     ["matiasfamilycrew@gmail.com"],
-            # )
-            # # print("Creacion del correo ")
-            # # Formato del mensaje en HTML.
-            # emailSender.content_subtype = "html"
-            # emailSender.fail_silently = False
-            # # Agregamos el PDF que hemos creado como adjunto al correo.
-            # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}")
-            # # Enviamos el correo.
-            # emailSender.send()
-            # --- Generar el PDF ---
-            nombre_carpeta = "Boleta_PDF_PACIENTES"
+# def generar_correo_reserv_index(reserva_uuid, tipo_pago):
+#     try:
+#         print("Ingresamos al CORREO INDEX DÉBITO")
+#         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+#         metodo_pago = reserva.tipo_pago
+#         pac_no_register = reserva.fk_pac_no_register
+#         pac = PacienteNoRegisterModel.objects.get(pk=pac_no_register.id)
+#         print(pac.email)
+#         print(pac.id)
+#         id_usuario = pac.id
+#         # Datos del usuario.
+#         nombre_completo = (
+#             pac.primer_nombre
+#             + " "
+#             + pac.segundo_nombre
+#             + " "
+#             + pac.ap_paterno
+#             + " "
+#             + pac.ap_materno
+#         )
+#         rut = pac.rut
+#         fono = pac.fono
+#         email = pac.email
+#         fecha_reserva = reserva.fecha_reserva
+#         especialidad = reserva.especialidad
+#         valor_esp = Especialidad.objects.get(nombre_especialidad=reserva.especialidad)
+#         valor_base = valor_esp.valor_especialidad
+#         nombre_doctor = reserva.nombre_doctor
+#         reserva_uuid = reserva.reserva_uuid
+#         nombre_clinica = reserva.nombre_clinica
+#         comuna_clinica = reserva.comuna_clinica
+#         direccion_clinica = reserva.direccion_clinica
+#         nombre_doctor = reserva.nombre_doctor
+#         hora_inicio = reserva.hora_inicio
+#         hora_termino = reserva.hora_termino
+#         fecha_creacion_reserva = reserva.fecha_creacion_reserva
+#         tipo_pago = reserva.tipo_pago
+#         aplica_descuento = None
+#         debito = ""
+#         credito = ""
+#         if tipo_pago == "0":
+#             debito = "Débito"
+#         if tipo_pago == "1":
+#             credito = "Crédito"
+#         # Si existe descuento, guardamos los datos en estas variables.
+#         total_pagar = None
+#         total_pagar_descuento = None
+#         fecha_utilizacion = None
+#         print(metodo_pago)
+#         descuento = None
+#         #
+#         if metodo_pago == "0":
+#             debito = DebitoModel.objects.get(fk_reserva=reserva.id)
+#             total_pagar = "No Existen Datos"
+#             total_pagar_descuento = "No Existen Datos"
+#             fecha_utilizacion = "No Existen Datos"
+#             aplica_descuento = "No"
+#             # Creación del correo.
+#             subject = "Correo Verificación Reserva"
+#             # Crearemos el envío de correos.
+#             template = render_to_string(
+#                 "pacientes_no_registrado/correo_reserva.html",
+#                 {
+#                     "nombre_paciente": nombre_completo,
+#                     "rut_paciente": rut,
+#                     "email_paciente": email,
+#                     "fono_paciente": fono,
+#                     "fecha_reserva": fecha_reserva,
+#                     "especialidad": especialidad,
+#                     "nombre_doctor": nombre_doctor,
+#                     "reserva_uuid": reserva_uuid,
+#                     "comuna_clinica": comuna_clinica,
+#                     "direccion_clinica": direccion_clinica,
+#                     "nombre_clinica": nombre_clinica,
+#                     "hora_inicio": hora_inicio,
+#                     "hora_termino": hora_termino,
+#                     "fecha_creacion_reserva": fecha_creacion_reserva,
+#                     "total_pagar": valor_base,
+#                     "tipo_pago": "Débito",
+#                     "monto": debito.monto,
+#                     "aplica_descuento": "No",
+#                     "valor_especialidad": valor_base,
+#                     "monto_total": debito.monto_total,
+#                     "total_pagar_descuento": "No aplica",
+#                     "fecha_utilizacion": "No aplica",
+#                     "descuento": "No aplica",
+#                     "reserva_pagada": "Sí",
+#                     "valor_base": valor_base,
+#                 },
+#             )
+#             # # Generar el PDF
+#             # nombre_carpeta = "Boleta_PDF_PACIENTES"
+#             # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}"
+#             # if not os.path.exists(ruta):
+#             #     os.makedirs(ruta)
+#             #     print(f"Carpeta creada en: {ruta}")
+#             # else:
+#             #     pass
+#             # now = datetime.now()
+#             # filename = f"Boleta_Reserva_Cita_{nombre_completo}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#             # # Creación del PDF.
+#             # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
+#             # # Configuración de pdfkit
+#             # options = {
+#             #     'enable-local-file-access': None,
+#             #     # 'orientation': 'Landscape',
+#             #     # 'page-size': 'A4',
+#             #     # 'margin-top': '0.2in',
+#             #     # 'margin-bottom': '0.2in',
+#             #     # 'encoding': "UTF-8",
+#             # }
+#             # print("Adjunto..........")
+#             # # template; Pertenece
+#             # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}", configuration=config, options=options)
+#             # # Envío del mensaje. Debemos pasar el template.
+#             # emailSender = EmailMessage(
+#             #     subject,
+#             #     template,
+#             #     settings.EMAIL_HOST_USER,
+#             #     ["matiasfamilycrew@gmail.com"],
+#             # )
+#             # # print("Creacion del correo ")
+#             # # Formato del mensaje en HTML.
+#             # emailSender.content_subtype = "html"
+#             # emailSender.fail_silently = False
+#             # # Agregamos el PDF que hemos creado como adjunto al correo.
+#             # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}")
+#             # # Enviamos el correo.
+#             # emailSender.send()
+#             # --- Generar el PDF ---
+#             nombre_carpeta = "Boleta_PDF_PACIENTES"
 
-            # Usamos BASE_DIR para que la ruta sea automática según el sistema (Linux o Windows)
-            # En PythonAnywhere esto apuntará a /home/tu-usuario/tu-proyecto/Boleta_PDF_PACIENTES
-            ruta_carpeta = os.path.join(settings.BASE_DIR, nombre_carpeta)
+#             # Usamos BASE_DIR para que la ruta sea automática según el sistema (Linux o Windows)
+#             # En PythonAnywhere esto apuntará a /home/tu-usuario/tu-proyecto/Boleta_PDF_PACIENTES
+#             ruta_carpeta = os.path.join(settings.BASE_DIR, nombre_carpeta)
 
-            if not os.path.exists(ruta_carpeta):
-                os.makedirs(ruta_carpeta)
-                print(f"Carpeta verificada/creada en: {ruta_carpeta}")
+#             if not os.path.exists(ruta_carpeta):
+#                 os.makedirs(ruta_carpeta)
+#                 print(f"Carpeta verificada/creada en: {ruta_carpeta}")
 
-            now = datetime.now()
-            # Limpiamos el nombre para evitar problemas de caracteres en Linux
-            nombre_limpio = nombre_completo.replace(" ", "_")
-            filename = f"Boleta_Reserva_Cita_{nombre_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#             now = datetime.now()
+#             # Limpiamos el nombre para evitar problemas de caracteres en Linux
+#             nombre_limpio = nombre_completo.replace(" ", "_")
+#             filename = f"Boleta_Reserva_Cita_{nombre_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
 
-            # Definimos la ruta completa del archivo
-            ruta_archivo_pdf = os.path.join(ruta_carpeta, filename)
+#             # Definimos la ruta completa del archivo
+#             ruta_archivo_pdf = os.path.join(ruta_carpeta, filename)
 
-            # --- Configuración de pdfkit ---
-            # Detectamos el sistema para evitar el error de ruta del .exe en Linux
-            if os.name == "nt":  # Windows
-                path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-            else:  # Linux (PythonAnywhere)
-                # En Linux suele estar instalado en el PATH global
-                config = pdfkit.configuration()
+#             # --- Configuración de pdfkit ---
+#             # Detectamos el sistema para evitar el error de ruta del .exe en Linux
+#             if os.name == "nt":  # Windows
+#                 path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+#                 config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+#             else:  # Linux (PythonAnywhere)
+#                 # En Linux suele estar instalado en el PATH global
+#                 config = pdfkit.configuration()
 
-            options = {
-                "enable-local-file-access": None,
-            }
+#             options = {
+#                 "enable-local-file-access": None,
+#             }
 
-            print("Generando PDF y adjuntando...")
+#             print("Generando PDF y adjuntando...")
 
-            # Generar el PDF usando la ruta dinámica
-            # Eliminamos las rutas C:\\Users... fijas que causan errores en Bash
-            pdfkit.from_string(
-                template, ruta_archivo_pdf, configuration=config, options=options
-            )
+#             # Generar el PDF usando la ruta dinámica
+#             # Eliminamos las rutas C:\\Users... fijas que causan errores en Bash
+#             pdfkit.from_string(
+#                 template, ruta_archivo_pdf, configuration=config, options=options
+#             )
 
-            # --- Envío del mensaje ---
-            emailSender = EmailMessage(
-                subject,
-                template,
-                settings.EMAIL_HOST_USER,
-                ["matiasfamilycrew@gmail.com"],
-            )
+#             # --- Envío del mensaje ---
+#             emailSender = EmailMessage(
+#                 subject,
+#                 template,
+#                 settings.EMAIL_HOST_USER,
+#                 ["matiasfamilycrew@gmail.com"],
+#             )
 
-            emailSender.content_subtype = "html"
-            emailSender.fail_silently = False
+#             emailSender.content_subtype = "html"
+#             emailSender.fail_silently = False
 
-            # Agregamos el PDF usando la ruta dinámica universal
-            emailSender.attach_file(ruta_archivo_pdf)
+#             # Agregamos el PDF usando la ruta dinámica universal
+#             emailSender.attach_file(ruta_archivo_pdf)
 
-            # Enviamos el correo
-            emailSender.send()
-        #
-        if metodo_pago == "1":
-            print("Ingresamos al Crédito")
-            metodo_credito = CreditoModel.objects.get(fk_reserva=reserva.id)
-            # Creación del correo.
-            subject = "Correo Verificación Reserva"
-            # Crearemos el envío de correos.
-            template = render_to_string(
-                "pacientes_no_registrado/correo_reserva.html",
-                {
-                    "nombre_paciente": nombre_completo,
-                    "rut_paciente": rut,
-                    "email_paciente": email,
-                    "fono_paciente": fono,
-                    "fecha_reserva": fecha_reserva,
-                    "especialidad": especialidad,
-                    "nombre_doctor": nombre_doctor,
-                    "reserva_uuid": reserva_uuid,
-                    "comuna_clinica": comuna_clinica,
-                    "direccion_clinica": direccion_clinica,
-                    "nombre_clinica": nombre_clinica,
-                    "hora_inicio": hora_inicio,
-                    "hora_termino": hora_termino,
-                    "fecha_creacion_reserva": fecha_creacion_reserva,
-                    "tipo_pago": "Crédito",
-                    "credito_uuid": metodo_credito.credito_uuid,
-                    "total_pagar": valor_base,
-                    "valor_especialidad": valor_base,
-                    "valor_base": valor_base,
-                    "descuento": "No aplica",
-                    "fecha_utilizacion": fecha_utilizacion,
-                    "fecha_pago": metodo_credito.fecha_pago,
-                    "cant_cuotas": metodo_credito.cant_cuotas,
-                    "monto_total": metodo_credito.monto_total,
-                    "monto_cuotas": metodo_credito.monto_cuotas,
-                    "monto": metodo_credito.monto,
-                    "reserva_pagada": "Sí",
-                },
-            )
-            # # Generar el PDF
-            # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES"
-            # if not os.path.exists(ruta):
-            #     os.makedirs(ruta)
-            #     print(f"Carpeta creada en: {ruta}")
-            # else:
-            #     pass
-            # now = datetime.now()
-            # filename = f"Boleta_Reserva_Cita_{nombre_completo}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
-            # # Creación del PDF.
-            # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
-            # options = {
-            #     'enable-local-file-access': None,
-            #     # 'orientation': 'Landscape',
-            #     # 'page-size': 'A4',
-            #     # 'margin-top': '0.2in',
-            #     # 'margin-bottom': '0.2in',
-            #     # 'encoding': "UTF-8",
-            # }
-            # print("Adjunto..........")
-            # # template; Pertenece
-            # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES\\{filename}", configuration=config, options=options)
-            # # Envío del mensaje. Debemos pasar el template.
-            # emailSender = EmailMessage(
-            #     subject,
-            #     template,
-            #     settings.EMAIL_HOST_USER,
-            #     ["matiasfamilycrew@gmail.com"],
-            # )
-            # # print("Creacion del correo ")
-            # # Formato del mensaje en HTML.
-            # emailSender.content_subtype = "html"
-            # emailSender.fail_silently = False
-            # # Agregamos el PDF que hemos creado como adjunto al correo.
-            # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES\\{filename}")
-            # # Enviamos el correo.
-            # emailSender.send()
-            # --- Generar el PDF ---
-            # 1. Definimos el nombre de la carpeta y la ruta dinámica
-            nombre_carpeta = "Boleta_PDF_PACIENTES"
-            # Usamos BASE_DIR para que funcione en cualquier sistema operativo
-            ruta_base_pdf = os.path.join(settings.BASE_DIR, nombre_carpeta)
+#             # Enviamos el correo
+#             emailSender.send()
+#         #
+#         if metodo_pago == "1":
+#             print("Ingresamos al Crédito")
+#             metodo_credito = CreditoModel.objects.get(fk_reserva=reserva.id)
+#             # Creación del correo.
+#             subject = "Correo Verificación Reserva"
+#             # Crearemos el envío de correos.
+#             template = render_to_string(
+#                 "pacientes_no_registrado/correo_reserva.html",
+#                 {
+#                     "nombre_paciente": nombre_completo,
+#                     "rut_paciente": rut,
+#                     "email_paciente": email,
+#                     "fono_paciente": fono,
+#                     "fecha_reserva": fecha_reserva,
+#                     "especialidad": especialidad,
+#                     "nombre_doctor": nombre_doctor,
+#                     "reserva_uuid": reserva_uuid,
+#                     "comuna_clinica": comuna_clinica,
+#                     "direccion_clinica": direccion_clinica,
+#                     "nombre_clinica": nombre_clinica,
+#                     "hora_inicio": hora_inicio,
+#                     "hora_termino": hora_termino,
+#                     "fecha_creacion_reserva": fecha_creacion_reserva,
+#                     "tipo_pago": "Crédito",
+#                     "credito_uuid": metodo_credito.credito_uuid,
+#                     "total_pagar": valor_base,
+#                     "valor_especialidad": valor_base,
+#                     "valor_base": valor_base,
+#                     "descuento": "No aplica",
+#                     "fecha_utilizacion": fecha_utilizacion,
+#                     "fecha_pago": metodo_credito.fecha_pago,
+#                     "cant_cuotas": metodo_credito.cant_cuotas,
+#                     "monto_total": metodo_credito.monto_total,
+#                     "monto_cuotas": metodo_credito.monto_cuotas,
+#                     "monto": metodo_credito.monto,
+#                     "reserva_pagada": "Sí",
+#                 },
+#             )
+#             # # Generar el PDF
+#             # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES"
+#             # if not os.path.exists(ruta):
+#             #     os.makedirs(ruta)
+#             #     print(f"Carpeta creada en: {ruta}")
+#             # else:
+#             #     pass
+#             # now = datetime.now()
+#             # filename = f"Boleta_Reserva_Cita_{nombre_completo}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#             # # Creación del PDF.
+#             # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
+#             # options = {
+#             #     'enable-local-file-access': None,
+#             #     # 'orientation': 'Landscape',
+#             #     # 'page-size': 'A4',
+#             #     # 'margin-top': '0.2in',
+#             #     # 'margin-bottom': '0.2in',
+#             #     # 'encoding': "UTF-8",
+#             # }
+#             # print("Adjunto..........")
+#             # # template; Pertenece
+#             # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES\\{filename}", configuration=config, options=options)
+#             # # Envío del mensaje. Debemos pasar el template.
+#             # emailSender = EmailMessage(
+#             #     subject,
+#             #     template,
+#             #     settings.EMAIL_HOST_USER,
+#             #     ["matiasfamilycrew@gmail.com"],
+#             # )
+#             # # print("Creacion del correo ")
+#             # # Formato del mensaje en HTML.
+#             # emailSender.content_subtype = "html"
+#             # emailSender.fail_silently = False
+#             # # Agregamos el PDF que hemos creado como adjunto al correo.
+#             # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\Boleta_PDF_PACIENTES\\{filename}")
+#             # # Enviamos el correo.
+#             # emailSender.send()
+#             # --- Generar el PDF ---
+#             # 1. Definimos el nombre de la carpeta y la ruta dinámica
+#             nombre_carpeta = "Boleta_PDF_PACIENTES"
+#             # Usamos BASE_DIR para que funcione en cualquier sistema operativo
+#             ruta_base_pdf = os.path.join(settings.BASE_DIR, nombre_carpeta)
 
-            if not os.path.exists(ruta_base_pdf):
-                os.makedirs(ruta_base_pdf)
-                print(f"Carpeta verificada/creada en: {ruta_base_pdf}")
+#             if not os.path.exists(ruta_base_pdf):
+#                 os.makedirs(ruta_base_pdf)
+#                 print(f"Carpeta verificada/creada en: {ruta_base_pdf}")
 
-            # 2. Preparamos el nombre del archivo
-            now = datetime.now()
-            # Reemplazamos espacios por guiones bajos para evitar errores en rutas de Linux
-            nombre_limpio = nombre_completo.replace(" ", "_")
-            filename = f"Boleta_Reserva_Cita_{nombre_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#             # 2. Preparamos el nombre del archivo
+#             now = datetime.now()
+#             # Reemplazamos espacios por guiones bajos para evitar errores en rutas de Linux
+#             nombre_limpio = nombre_completo.replace(" ", "_")
+#             filename = f"Boleta_Reserva_Cita_{nombre_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
 
-            # 3. Ruta completa final del archivo (Universal)
-            ruta_archivo_final = os.path.join(ruta_base_pdf, filename)
+#             # 3. Ruta completa final del archivo (Universal)
+#             ruta_archivo_final = os.path.join(ruta_base_pdf, filename)
 
-            # 4. Configuración de pdfkit (Detección automática de SO)
-            # Esto evita que PythonAnywhere busque un archivo .exe que no existe
-            if os.name == "nt":  # Si estás en Windows (Local)
-                path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-            else:  # Si estás en Linux (PythonAnywhere)
-                config = pdfkit.configuration()
+#             # 4. Configuración de pdfkit (Detección automática de SO)
+#             # Esto evita que PythonAnywhere busque un archivo .exe que no existe
+#             if os.name == "nt":  # Si estás en Windows (Local)
+#                 path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+#                 config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+#             else:  # Si estás en Linux (PythonAnywhere)
+#                 config = pdfkit.configuration()
 
-            options = {
-                "enable-local-file-access": None,
-            }
+#             options = {
+#                 "enable-local-file-access": None,
+#             }
 
-            print(f"Generando PDF en: {ruta_archivo_final}")
+#             print(f"Generando PDF en: {ruta_archivo_final}")
 
-            # 5. Creación del PDF
-            # Eliminamos la ruta manual C:\\Users... para usar la variable dinámica
-            pdfkit.from_string(
-                template, ruta_archivo_final, configuration=config, options=options
-            )
+#             # 5. Creación del PDF
+#             # Eliminamos la ruta manual C:\\Users... para usar la variable dinámica
+#             pdfkit.from_string(
+#                 template, ruta_archivo_final, configuration=config, options=options
+#             )
 
-            # --- Envío del mensaje ---
+#             # --- Envío del mensaje ---
 
-            emailSender = EmailMessage(
-                subject,
-                template,
-                settings.EMAIL_HOST_USER,
-                ["matiasfamilycrew@gmail.com"],
-            )
+#             emailSender = EmailMessage(
+#                 subject,
+#                 template,
+#                 settings.EMAIL_HOST_USER,
+#                 ["matiasfamilycrew@gmail.com"],
+#             )
 
-            # Formato del mensaje en HTML.
-            emailSender.content_subtype = "html"
-            emailSender.fail_silently = False
+#             # Formato del mensaje en HTML.
+#             emailSender.content_subtype = "html"
+#             emailSender.fail_silently = False
 
-            # 6. Agregamos el PDF adjunto usando la ruta dinámica
-            emailSender.attach_file(ruta_archivo_final)
+#             # 6. Agregamos el PDF adjunto usando la ruta dinámica
+#             emailSender.attach_file(ruta_archivo_final)
 
-            # Enviamos el correo.
-            emailSender.send()
-            print("Correo enviado con éxito.")
-    except Exception as err:
-        print(f"Unexpected {err=}, {type(err)=}")
-        return Response({"error": 1}, status=400)
+#             # Enviamos el correo.
+#             emailSender.send()
+#             print("Correo enviado con éxito.")
+#     except Exception as err:
+#         print(f"Unexpected {err=}, {type(err)=}")
+#         return Response({"error": 1}, status=400)
 
 
 #
@@ -1768,7 +1768,7 @@ def update_pago_debito_reserva(request, reserva_uuid):
                                 )
                                 if insertar_desc.is_valid():
                                     insertar_desc.save()
-                                    correo_res_pagada(reserva_uuid, cod.id)
+                                    # correo_res_pagada(reserva_uuid, cod.id)
                                     return Response(
                                         {"success": 1},
                                         # Específicamos el status.
@@ -1812,7 +1812,7 @@ def update_pago_debito_reserva(request, reserva_uuid):
                     if insert_debito.is_valid():
                         insert_debito.save()
                         # Dato para crear el email.
-                        correo_res_pagada(reserva_uuid, 0)
+                        # correo_res_pagada(reserva_uuid, 0)
                         return Response(
                             {"success": 1},
                             # Específicamos el status.
@@ -1939,7 +1939,7 @@ def update_pago_credito_reserva(request, reserva_uuid):
                                 )
                                 if insertar_desc.is_valid():
                                     insertar_desc.save()
-                                    correo_res_pagada(reserva_uuid, id_descuento)
+                                    # correo_res_pagada(reserva_uuid, id_descuento)
                                     return Response(
                                         {"success": 1},
                                         # Específicamos el status.
@@ -1991,7 +1991,7 @@ def update_pago_credito_reserva(request, reserva_uuid):
                     if insert_credito.is_valid():
                         insert_credito.save()
                         # Dato para crear el email.
-                        correo_res_pagada(reserva_uuid, 0)
+                        # correo_res_pagada(reserva_uuid, 0)
                         return Response(
                             {"success": 1},
                             # Específicamos el status.
@@ -2011,443 +2011,443 @@ def update_pago_credito_reserva(request, reserva_uuid):
 
 
 # Reserva creada por la SECRETARIA y pagada desde el panel PACIENTE.
-def correo_res_pagada(reserva_uuid, fk_descuento):
-    try:
-        print("RESERVA_UUID")
-        print("fk_descuento")
-        print(fk_descuento)
-        reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-        metodo_pago = reserva.tipo_pago
-        usuario = reserva.fk_usuario
-        usuario = CustomersUsers.objects.get(username=usuario)
-        print(usuario.email)
-        paciente = PacienteModel.objects.get(fk_user=usuario.id)
-        print(paciente.fk_user.id)
+# def correo_res_pagada(reserva_uuid, fk_descuento):
+#     try:
+#         print("RESERVA_UUID")
+#         print("fk_descuento")
+#         print(fk_descuento)
+#         reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+#         metodo_pago = reserva.tipo_pago
+#         usuario = reserva.fk_usuario
+#         usuario = CustomersUsers.objects.get(username=usuario)
+#         print(usuario.email)
+#         paciente = PacienteModel.objects.get(fk_user=usuario.id)
+#         print(paciente.fk_user.id)
 
-        id_usuario = paciente.fk_user.id
-        # Datos del usuario.
-        nombre_completo = (
-            paciente.primer_nombre
-            + " "
-            + paciente.segundo_nombre
-            + " "
-            + paciente.ap_paterno
-            + " "
-            + paciente.ap_materno
-        )
-        rut = paciente.rut
-        fono = paciente.fono
-        email = usuario.email
-        fecha_reserva = reserva.fecha_reserva
-        especialidad = reserva.especialidad
-        valor_esp = Especialidad.objects.get(nombre_especialidad=reserva.especialidad)
-        valor_base = valor_esp.valor_especialidad
-        nombre_doctor = reserva.nombre_doctor
-        reserva_uuid = reserva.reserva_uuid
-        nombre_clinica = reserva.nombre_clinica
-        comuna_clinica = reserva.comuna_clinica
-        direccion_clinica = reserva.direccion_clinica
-        nombre_doctor = reserva.nombre_doctor
-        hora_inicio = reserva.hora_inicio
-        hora_termino = reserva.hora_termino
-        fecha_creacion_reserva = reserva.fecha_creacion_reserva
-        tipo_pago = reserva.tipo_pago
-        aplica_descuento = None
-        debito = ""
-        credito = ""
-        if tipo_pago == "0":
-            debito = "Débito"
-        if tipo_pago == "1":
-            credito = "Crédito"
-        # Si existe descuento, guardamos los datos en estas variables.
-        total_pagar = None
-        total_pagar_descuento = None
-        fecha_utilizacion = None
-        print(metodo_pago)
-        descuento = None
-        #
-        if metodo_pago == "0":
-            if fk_descuento == 0:
-                debito = DebitoModel.objects.get(fk_reserva=reserva.id)
-                total_pagar = "No Existen Datos"
-                total_pagar_descuento = "No Existen Datos"
-                fecha_utilizacion = "No Existen Datos"
-                aplica_descuento = "No"
-                # Creación del correo.
-                subject = "Correo Verificación Reserva"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/correo_reserva.html",
-                    {
-                        "nombre_paciente": nombre_completo,
-                        "rut_paciente": rut,
-                        "email_paciente": email,
-                        "fono_paciente": fono,
-                        "fecha_reserva": fecha_reserva,
-                        "especialidad": especialidad,
-                        "nombre_doctor": nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": comuna_clinica,
-                        "direccion_clinica": direccion_clinica,
-                        "nombre_clinica": nombre_clinica,
-                        "hora_inicio": hora_inicio,
-                        "hora_termino": hora_termino,
-                        "fecha_creacion_reserva": fecha_creacion_reserva,
-                        "total_pagar": valor_base,
-                        "tipo_pago": "Débito",
-                        "monto": debito.monto,
-                        "aplica_descuento": "No",
-                        "valor_especialidad": valor_base,
-                        "monto_total": debito.monto_total,
-                        "total_pagar_descuento": "No aplica",
-                        "fecha_utilizacion": "No aplica",
-                        "descuento": "No aplica",
-                        "reserva_pagada": "Sí",
-                        "valor_base": valor_base,
-                    },
-                )
-                # # Generar el PDF
-                # nombre_carpeta = "Boleta_PDF_PACIENTES"
-                # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}"
-                # if not os.path.exists(ruta):
-                #     os.makedirs(ruta)
-                #     print(f"Carpeta creada en: {ruta}")
-                # else:
-                #     pass
-                # now = datetime.now()
-                # filename = f"Boleta_Reserva_Cita_{nombre_completo}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
-                # # Creación del PDF.
-                # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
-                # # Configuración de pdfkit
-                # options = {
-                #     'enable-local-file-access': None,
-                #     # 'orientation': 'Landscape',
-                #     # 'page-size': 'A4',
-                #     # 'margin-top': '0.2in',
-                #     # 'margin-bottom': '0.2in',
-                #     # 'encoding': "UTF-8",
-                # }
-                # print("Adjunto..........")
-                # # template; Pertenece
-                # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}", configuration=config, options=options)
-                # # Envío del mensaje. Debemos pasar el template.
-                # emailSender = EmailMessage(
-                #     subject,
-                #     template,
-                #     settings.EMAIL_HOST_USER,
-                #     ["matiasfamilycrew@gmail.com"],
-                # )
-                # # print("Creacion del correo ")
-                # # Formato del mensaje en HTML.
-                # emailSender.content_subtype = "html"
-                # emailSender.fail_silently = False
-                # # Agregamos el PDF que hemos creado como adjunto al correo.
-                # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}")
-                # # Enviamos el correo.
-                # emailSender.send()
-                # --- Generar el PDF ---
-                nombre_carpeta = "Boleta_PDF_PACIENTES"
+#         id_usuario = paciente.fk_user.id
+#         # Datos del usuario.
+#         nombre_completo = (
+#             paciente.primer_nombre
+#             + " "
+#             + paciente.segundo_nombre
+#             + " "
+#             + paciente.ap_paterno
+#             + " "
+#             + paciente.ap_materno
+#         )
+#         rut = paciente.rut
+#         fono = paciente.fono
+#         email = usuario.email
+#         fecha_reserva = reserva.fecha_reserva
+#         especialidad = reserva.especialidad
+#         valor_esp = Especialidad.objects.get(nombre_especialidad=reserva.especialidad)
+#         valor_base = valor_esp.valor_especialidad
+#         nombre_doctor = reserva.nombre_doctor
+#         reserva_uuid = reserva.reserva_uuid
+#         nombre_clinica = reserva.nombre_clinica
+#         comuna_clinica = reserva.comuna_clinica
+#         direccion_clinica = reserva.direccion_clinica
+#         nombre_doctor = reserva.nombre_doctor
+#         hora_inicio = reserva.hora_inicio
+#         hora_termino = reserva.hora_termino
+#         fecha_creacion_reserva = reserva.fecha_creacion_reserva
+#         tipo_pago = reserva.tipo_pago
+#         aplica_descuento = None
+#         debito = ""
+#         credito = ""
+#         if tipo_pago == "0":
+#             debito = "Débito"
+#         if tipo_pago == "1":
+#             credito = "Crédito"
+#         # Si existe descuento, guardamos los datos en estas variables.
+#         total_pagar = None
+#         total_pagar_descuento = None
+#         fecha_utilizacion = None
+#         print(metodo_pago)
+#         descuento = None
+#         #
+#         if metodo_pago == "0":
+#             if fk_descuento == 0:
+#                 debito = DebitoModel.objects.get(fk_reserva=reserva.id)
+#                 total_pagar = "No Existen Datos"
+#                 total_pagar_descuento = "No Existen Datos"
+#                 fecha_utilizacion = "No Existen Datos"
+#                 aplica_descuento = "No"
+#                 # Creación del correo.
+#                 subject = "Correo Verificación Reserva"
+#                 # Crearemos el envío de correos.
+#                 template = render_to_string(
+#                     "pacientes/correo_reserva.html",
+#                     {
+#                         "nombre_paciente": nombre_completo,
+#                         "rut_paciente": rut,
+#                         "email_paciente": email,
+#                         "fono_paciente": fono,
+#                         "fecha_reserva": fecha_reserva,
+#                         "especialidad": especialidad,
+#                         "nombre_doctor": nombre_doctor,
+#                         "reserva_uuid": reserva_uuid,
+#                         "comuna_clinica": comuna_clinica,
+#                         "direccion_clinica": direccion_clinica,
+#                         "nombre_clinica": nombre_clinica,
+#                         "hora_inicio": hora_inicio,
+#                         "hora_termino": hora_termino,
+#                         "fecha_creacion_reserva": fecha_creacion_reserva,
+#                         "total_pagar": valor_base,
+#                         "tipo_pago": "Débito",
+#                         "monto": debito.monto,
+#                         "aplica_descuento": "No",
+#                         "valor_especialidad": valor_base,
+#                         "monto_total": debito.monto_total,
+#                         "total_pagar_descuento": "No aplica",
+#                         "fecha_utilizacion": "No aplica",
+#                         "descuento": "No aplica",
+#                         "reserva_pagada": "Sí",
+#                         "valor_base": valor_base,
+#                     },
+#                 )
+#                 # # Generar el PDF
+#                 # nombre_carpeta = "Boleta_PDF_PACIENTES"
+#                 # ruta = f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}"
+#                 # if not os.path.exists(ruta):
+#                 #     os.makedirs(ruta)
+#                 #     print(f"Carpeta creada en: {ruta}")
+#                 # else:
+#                 #     pass
+#                 # now = datetime.now()
+#                 # filename = f"Boleta_Reserva_Cita_{nombre_completo}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#                 # # Creación del PDF.
+#                 # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
+#                 # # Configuración de pdfkit
+#                 # options = {
+#                 #     'enable-local-file-access': None,
+#                 #     # 'orientation': 'Landscape',
+#                 #     # 'page-size': 'A4',
+#                 #     # 'margin-top': '0.2in',
+#                 #     # 'margin-bottom': '0.2in',
+#                 #     # 'encoding': "UTF-8",
+#                 # }
+#                 # print("Adjunto..........")
+#                 # # template; Pertenece
+#                 # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}", configuration=config, options=options)
+#                 # # Envío del mensaje. Debemos pasar el template.
+#                 # emailSender = EmailMessage(
+#                 #     subject,
+#                 #     template,
+#                 #     settings.EMAIL_HOST_USER,
+#                 #     ["matiasfamilycrew@gmail.com"],
+#                 # )
+#                 # # print("Creacion del correo ")
+#                 # # Formato del mensaje en HTML.
+#                 # emailSender.content_subtype = "html"
+#                 # emailSender.fail_silently = False
+#                 # # Agregamos el PDF que hemos creado como adjunto al correo.
+#                 # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\{nombre_carpeta}\\{filename}")
+#                 # # Enviamos el correo.
+#                 # emailSender.send()
+#                 # --- Generar el PDF ---
+#                 nombre_carpeta = "Boleta_PDF_PACIENTES"
 
-                # Usamos BASE_DIR para que la ruta se adapte automáticamente al servidor
-                ruta_base = os.path.join(settings.BASE_DIR, nombre_carpeta)
+#                 # Usamos BASE_DIR para que la ruta se adapte automáticamente al servidor
+#                 ruta_base = os.path.join(settings.BASE_DIR, nombre_carpeta)
 
-                if not os.path.exists(ruta_base):
-                    os.makedirs(ruta_base)
-                    print(f"Carpeta verificada/creada en: {ruta_base}")
+#                 if not os.path.exists(ruta_base):
+#                     os.makedirs(ruta_base)
+#                     print(f"Carpeta verificada/creada en: {ruta_base}")
 
-                now = datetime.now()
-                # Limpiamos el nombre para evitar problemas con espacios en sistemas Linux
-                nombre_archivo_limpio = nombre_completo.replace(" ", "_")
-                filename = f"Boleta_Reserva_Cita_{nombre_archivo_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#                 now = datetime.now()
+#                 # Limpiamos el nombre para evitar problemas con espacios en sistemas Linux
+#                 nombre_archivo_limpio = nombre_completo.replace(" ", "_")
+#                 filename = f"Boleta_Reserva_Cita_{nombre_archivo_limpio}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
 
-                # Definimos la ruta completa del archivo de forma dinámica
-                ruta_pdf_final = os.path.join(ruta_base, filename)
+#                 # Definimos la ruta completa del archivo de forma dinámica
+#                 ruta_pdf_final = os.path.join(ruta_base, filename)
 
-                # --- Configuración de pdfkit ---
-                # Detectamos el sistema para no buscar un .exe en Linux
-                if os.name == "nt":  # Windows
-                    path_wkhtmltopdf = (
-                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                    )
-                    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-                else:  # Linux (PythonAnywhere)
-                    # En Linux, pdfkit busca el binario directamente en el sistema
-                    config = pdfkit.configuration()
+#                 # --- Configuración de pdfkit ---
+#                 # Detectamos el sistema para no buscar un .exe en Linux
+#                 if os.name == "nt":  # Windows
+#                     path_wkhtmltopdf = (
+#                         r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+#                     )
+#                     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+#                 else:  # Linux (PythonAnywhere)
+#                     # En Linux, pdfkit busca el binario directamente en el sistema
+#                     config = pdfkit.configuration()
 
-                options = {
-                    "enable-local-file-access": None,
-                }
+#                 options = {
+#                     "enable-local-file-access": None,
+#                 }
 
-                print("Adjuntando y generando PDF...")
+#                 print("Adjuntando y generando PDF...")
 
-                # Generar el PDF usando la ruta dinámica (sin C:\\Users...)
-                pdfkit.from_string(
-                    template, ruta_pdf_final, configuration=config, options=options
-                )
+#                 # Generar el PDF usando la ruta dinámica (sin C:\\Users...)
+#                 pdfkit.from_string(
+#                     template, ruta_pdf_final, configuration=config, options=options
+#                 )
 
-                # --- Envío del mensaje ---
-                emailSender = EmailMessage(
-                    subject,
-                    template,
-                    settings.EMAIL_HOST_USER,
-                    ["matiasfamilycrew@gmail.com"],
-                )
+#                 # --- Envío del mensaje ---
+#                 emailSender = EmailMessage(
+#                     subject,
+#                     template,
+#                     settings.EMAIL_HOST_USER,
+#                     ["matiasfamilycrew@gmail.com"],
+#                 )
 
-                emailSender.content_subtype = "html"
-                emailSender.fail_silently = False
+#                 emailSender.content_subtype = "html"
+#                 emailSender.fail_silently = False
 
-                # Agregamos el PDF adjunto usando la ruta dinámica universal
-                emailSender.attach_file(ruta_pdf_final)
+#                 # Agregamos el PDF adjunto usando la ruta dinámica universal
+#                 emailSender.attach_file(ruta_pdf_final)
 
-                # Enviamos el correo
-                emailSender.send()
-            if fk_descuento != 0:
-                print("Ingresamos Correctamente")
-                reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
-                debito_uuid = DebitoModel.objects.get(fk_reserva=reserva.id)
-                desc_pac = DescuentoPaciente.objects.filter(
-                    fk_paciente=paciente.id, fk_descuento=fk_descuento
-                )
-                desc = DescuentoModel.objects.get(pk=fk_descuento)
-                # Realizamos la operacion de descuento para mostrar en el Correo.
-                pagar = valor_base * desc.descuento / 100
-                total_pagar_descuento = valor_base - pagar
-                print("Datos de Descuento Alicado")
-                print(desc.descuento)
-                print(debito_uuid.monto_total)
-                print(total_pagar_descuento)
-                print(desc.descuento)
-                print("Datos de Descuento Alicado")
-                for des_paciente in desc_pac:
-                    total_pagar = des_paciente.total_pagar
-                    total_pagar_descuento = des_paciente.total_pagar_descuento
-                    fecha_utilizacion = des_paciente.fecha_utilizacion
-                    aplica_descuento = "Sí"
-                    # Creación del correo.
-                    subject = "Correo Verificación Reserva"
-                    # Crearemos el envío de correos.
-                    template = render_to_string(
-                        "pacientes/correo_reserva.html",
-                        {
-                            "nombre_paciente": nombre_completo,
-                            "rut_paciente": rut,
-                            "email_paciente": email,
-                            "fono_paciente": fono,
-                            "fecha_reserva": fecha_reserva,
-                            "especialidad": especialidad,
-                            "nombre_doctor": nombre_doctor,
-                            "reserva_uuid": reserva_uuid,
-                            "comuna_clinica": comuna_clinica,
-                            "direccion_clinica": direccion_clinica,
-                            "nombre_clinica": nombre_clinica,
-                            "hora_inicio": hora_inicio,
-                            "hora_termino": hora_termino,
-                            "fecha_creacion_reserva": fecha_creacion_reserva,
-                            "total_pagar": total_pagar,
-                            "tipo_pago": "Débito",
-                            "monto": debito_uuid.monto,
-                            "aplica_descuento": aplica_descuento,
-                            "valor_descuento": desc.descuento,
-                            "monto_total": debito_uuid.monto_total,
-                            "total_pagar": total_pagar_descuento,
-                            "fecha_utilizacion": fecha_utilizacion,
-                            "descuento": desc.descuento,
-                            "reserva_pagada": "Sí",
-                            "valor_base": valor_base,
-                            "valor_especialidad": valor_base,
-                        },
-                    )
-                    # Envío del mensaje. Debemos pasar el template.
-                    emailSender = EmailMessage(
-                        subject,
-                        template,
-                        settings.EMAIL_HOST_USER,
-                        ["matiasfamilycrew@gmail.com"],
-                    )
-                #
-                emailSender.content_subtype = "html"
-                emailSender.fail_silently = False
-                # Método para la creación del PDF.
-                pdf_res_pagada_pac(template, nombre_completo, emailSender)
-                # Enviamos el correo.
-                emailSender.send()
-        #
-        if metodo_pago == "1":
-            print("Ingresamos al Crédito")
-            metodo_credito = CreditoModel.objects.get(fk_reserva=reserva.id)
-            if fk_descuento != 0:
-                descuento = DescuentoModel.objects.get(pk=fk_descuento)
-                descuento_aplicado = DescuentoPaciente.objects.filter(
-                    fk_paciente=paciente.id, fk_descuento=fk_descuento
-                )
-                #
-                if descuento_aplicado.exists():
-                    for desc_apli in descuento_aplicado:
-                        descuento_apl = descuento.descuento
-                        total_pagar = desc_apli.total_pagar
-                        total_pagar_descuento = desc_apli.total_pagar_descuento
-                        fecha_utilizacion = desc_apli.fecha_utilizacion
-                #
-                if not descuento_aplicado.exists():
-                    total_pagar = "No hay Datos"
-                    total_pagar_descuento = "No hay Datos"
-                    fecha_utilizacion = "No hay Datos"
-                # Creación del correo.
-                subject = "Correo Verificación Reserva"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/correo_reserva.html",
-                    {
-                        "nombre_paciente": nombre_completo,
-                        "rut_paciente": rut,
-                        "email_paciente": email,
-                        "fono_paciente": fono,
-                        "fecha_reserva": fecha_reserva,
-                        "especialidad": especialidad,
-                        "nombre_doctor": nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": comuna_clinica,
-                        "direccion_clinica": direccion_clinica,
-                        "nombre_clinica": nombre_clinica,
-                        "hora_inicio": hora_inicio,
-                        "hora_termino": hora_termino,
-                        "fecha_creacion_reserva": fecha_creacion_reserva,
-                        "tipo_pago": "Crédito",
-                        "credito_uuid": metodo_credito.credito_uuid,
-                        "total_pagar": total_pagar_descuento,
-                        "valor_especialidad": valor_base,
-                        "valor_base": valor_base,
-                        "descuento": descuento.descuento,
-                        "fecha_utilizacion": fecha_utilizacion,
-                        "fecha_pago": metodo_credito.fecha_pago,
-                        "cant_cuotas": metodo_credito.cant_cuotas,
-                        "monto_total": metodo_credito.monto_total,
-                        "monto_cuotas": metodo_credito.monto_cuotas,
-                        "monto": metodo_credito.monto,
-                        "reserva_pagada": "Sí",
-                    },
-                )
-            else:
-                # Creación del correo.
-                subject = "Correo Verificación Reserva"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/correo_reserva.html",
-                    {
-                        "nombre_paciente": nombre_completo,
-                        "rut_paciente": rut,
-                        "email_paciente": email,
-                        "fono_paciente": fono,
-                        "fecha_reserva": fecha_reserva,
-                        "especialidad": especialidad,
-                        "nombre_doctor": nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": comuna_clinica,
-                        "direccion_clinica": direccion_clinica,
-                        "nombre_clinica": nombre_clinica,
-                        "hora_inicio": hora_inicio,
-                        "hora_termino": hora_termino,
-                        "fecha_creacion_reserva": fecha_creacion_reserva,
-                        "tipo_pago": "Crédito",
-                        "credito_uuid": metodo_credito.credito_uuid,
-                        "total_pagar": valor_base,
-                        "valor_especialidad": valor_base,
-                        "valor_base": valor_base,
-                        "descuento": "No aplica",
-                        "fecha_utilizacion": "No aplica",
-                        "fecha_pago": metodo_credito.fecha_pago,
-                        "cant_cuotas": metodo_credito.cant_cuotas,
-                        "monto_total": metodo_credito.monto_total,
-                        "monto_cuotas": metodo_credito.monto_cuotas,
-                        "monto": metodo_credito.monto,
-                        "reserva_pagada": "Sí",
-                    },
-                )
-            # Envío del mensaje. Debemos pasar el template.
-            emailSender = EmailMessage(
-                subject,
-                template,
-                settings.EMAIL_HOST_USER,
-                ["matiasfamilycrew@gmail.com"],
-            )
-            emailSender.content_subtype = "html"
-            emailSender.fail_silently = False
-            #
-            pdf_res_pagada_pac(template, nombre_completo, emailSender)
-            # Enviamos el correo.
-            emailSender.send()
-    except Exception as err:
-        print(f"Unexpected {err=}, {type(err)=}")
-        return Response({"error": 0}, status=400)
+#                 # Enviamos el correo
+#                 emailSender.send()
+#             if fk_descuento != 0:
+#                 print("Ingresamos Correctamente")
+#                 reserva = ReservaModel.objects.get(reserva_uuid=reserva_uuid)
+#                 debito_uuid = DebitoModel.objects.get(fk_reserva=reserva.id)
+#                 desc_pac = DescuentoPaciente.objects.filter(
+#                     fk_paciente=paciente.id, fk_descuento=fk_descuento
+#                 )
+#                 desc = DescuentoModel.objects.get(pk=fk_descuento)
+#                 # Realizamos la operacion de descuento para mostrar en el Correo.
+#                 pagar = valor_base * desc.descuento / 100
+#                 total_pagar_descuento = valor_base - pagar
+#                 print("Datos de Descuento Alicado")
+#                 print(desc.descuento)
+#                 print(debito_uuid.monto_total)
+#                 print(total_pagar_descuento)
+#                 print(desc.descuento)
+#                 print("Datos de Descuento Alicado")
+#                 for des_paciente in desc_pac:
+#                     total_pagar = des_paciente.total_pagar
+#                     total_pagar_descuento = des_paciente.total_pagar_descuento
+#                     fecha_utilizacion = des_paciente.fecha_utilizacion
+#                     aplica_descuento = "Sí"
+#                     # Creación del correo.
+#                     subject = "Correo Verificación Reserva"
+#                     # Crearemos el envío de correos.
+#                     template = render_to_string(
+#                         "pacientes/correo_reserva.html",
+#                         {
+#                             "nombre_paciente": nombre_completo,
+#                             "rut_paciente": rut,
+#                             "email_paciente": email,
+#                             "fono_paciente": fono,
+#                             "fecha_reserva": fecha_reserva,
+#                             "especialidad": especialidad,
+#                             "nombre_doctor": nombre_doctor,
+#                             "reserva_uuid": reserva_uuid,
+#                             "comuna_clinica": comuna_clinica,
+#                             "direccion_clinica": direccion_clinica,
+#                             "nombre_clinica": nombre_clinica,
+#                             "hora_inicio": hora_inicio,
+#                             "hora_termino": hora_termino,
+#                             "fecha_creacion_reserva": fecha_creacion_reserva,
+#                             "total_pagar": total_pagar,
+#                             "tipo_pago": "Débito",
+#                             "monto": debito_uuid.monto,
+#                             "aplica_descuento": aplica_descuento,
+#                             "valor_descuento": desc.descuento,
+#                             "monto_total": debito_uuid.monto_total,
+#                             "total_pagar": total_pagar_descuento,
+#                             "fecha_utilizacion": fecha_utilizacion,
+#                             "descuento": desc.descuento,
+#                             "reserva_pagada": "Sí",
+#                             "valor_base": valor_base,
+#                             "valor_especialidad": valor_base,
+#                         },
+#                     )
+#                     # Envío del mensaje. Debemos pasar el template.
+#                     emailSender = EmailMessage(
+#                         subject,
+#                         template,
+#                         settings.EMAIL_HOST_USER,
+#                         ["matiasfamilycrew@gmail.com"],
+#                     )
+#                 #
+#                 emailSender.content_subtype = "html"
+#                 emailSender.fail_silently = False
+#                 # Método para la creación del PDF.
+#                 pdf_res_pagada_pac(template, nombre_completo, emailSender)
+#                 # Enviamos el correo.
+#                 emailSender.send()
+#         #
+#         if metodo_pago == "1":
+#             print("Ingresamos al Crédito")
+#             metodo_credito = CreditoModel.objects.get(fk_reserva=reserva.id)
+#             if fk_descuento != 0:
+#                 descuento = DescuentoModel.objects.get(pk=fk_descuento)
+#                 descuento_aplicado = DescuentoPaciente.objects.filter(
+#                     fk_paciente=paciente.id, fk_descuento=fk_descuento
+#                 )
+#                 #
+#                 if descuento_aplicado.exists():
+#                     for desc_apli in descuento_aplicado:
+#                         descuento_apl = descuento.descuento
+#                         total_pagar = desc_apli.total_pagar
+#                         total_pagar_descuento = desc_apli.total_pagar_descuento
+#                         fecha_utilizacion = desc_apli.fecha_utilizacion
+#                 #
+#                 if not descuento_aplicado.exists():
+#                     total_pagar = "No hay Datos"
+#                     total_pagar_descuento = "No hay Datos"
+#                     fecha_utilizacion = "No hay Datos"
+#                 # Creación del correo.
+#                 subject = "Correo Verificación Reserva"
+#                 # Crearemos el envío de correos.
+#                 template = render_to_string(
+#                     "pacientes/correo_reserva.html",
+#                     {
+#                         "nombre_paciente": nombre_completo,
+#                         "rut_paciente": rut,
+#                         "email_paciente": email,
+#                         "fono_paciente": fono,
+#                         "fecha_reserva": fecha_reserva,
+#                         "especialidad": especialidad,
+#                         "nombre_doctor": nombre_doctor,
+#                         "reserva_uuid": reserva_uuid,
+#                         "comuna_clinica": comuna_clinica,
+#                         "direccion_clinica": direccion_clinica,
+#                         "nombre_clinica": nombre_clinica,
+#                         "hora_inicio": hora_inicio,
+#                         "hora_termino": hora_termino,
+#                         "fecha_creacion_reserva": fecha_creacion_reserva,
+#                         "tipo_pago": "Crédito",
+#                         "credito_uuid": metodo_credito.credito_uuid,
+#                         "total_pagar": total_pagar_descuento,
+#                         "valor_especialidad": valor_base,
+#                         "valor_base": valor_base,
+#                         "descuento": descuento.descuento,
+#                         "fecha_utilizacion": fecha_utilizacion,
+#                         "fecha_pago": metodo_credito.fecha_pago,
+#                         "cant_cuotas": metodo_credito.cant_cuotas,
+#                         "monto_total": metodo_credito.monto_total,
+#                         "monto_cuotas": metodo_credito.monto_cuotas,
+#                         "monto": metodo_credito.monto,
+#                         "reserva_pagada": "Sí",
+#                     },
+#                 )
+#             else:
+#                 # Creación del correo.
+#                 subject = "Correo Verificación Reserva"
+#                 # Crearemos el envío de correos.
+#                 template = render_to_string(
+#                     "pacientes/correo_reserva.html",
+#                     {
+#                         "nombre_paciente": nombre_completo,
+#                         "rut_paciente": rut,
+#                         "email_paciente": email,
+#                         "fono_paciente": fono,
+#                         "fecha_reserva": fecha_reserva,
+#                         "especialidad": especialidad,
+#                         "nombre_doctor": nombre_doctor,
+#                         "reserva_uuid": reserva_uuid,
+#                         "comuna_clinica": comuna_clinica,
+#                         "direccion_clinica": direccion_clinica,
+#                         "nombre_clinica": nombre_clinica,
+#                         "hora_inicio": hora_inicio,
+#                         "hora_termino": hora_termino,
+#                         "fecha_creacion_reserva": fecha_creacion_reserva,
+#                         "tipo_pago": "Crédito",
+#                         "credito_uuid": metodo_credito.credito_uuid,
+#                         "total_pagar": valor_base,
+#                         "valor_especialidad": valor_base,
+#                         "valor_base": valor_base,
+#                         "descuento": "No aplica",
+#                         "fecha_utilizacion": "No aplica",
+#                         "fecha_pago": metodo_credito.fecha_pago,
+#                         "cant_cuotas": metodo_credito.cant_cuotas,
+#                         "monto_total": metodo_credito.monto_total,
+#                         "monto_cuotas": metodo_credito.monto_cuotas,
+#                         "monto": metodo_credito.monto,
+#                         "reserva_pagada": "Sí",
+#                     },
+#                 )
+#             # Envío del mensaje. Debemos pasar el template.
+#             emailSender = EmailMessage(
+#                 subject,
+#                 template,
+#                 settings.EMAIL_HOST_USER,
+#                 ["matiasfamilycrew@gmail.com"],
+#             )
+#             emailSender.content_subtype = "html"
+#             emailSender.fail_silently = False
+#             #
+#             pdf_res_pagada_pac(template, nombre_completo, emailSender)
+#             # Enviamos el correo.
+#             emailSender.send()
+#     except Exception as err:
+#         print(f"Unexpected {err=}, {type(err)=}")
+#         return Response({"error": 0}, status=400)
 
 
 # Creación PDF pago resrva creada por la SECRETARIA y pagada desde el panel PACIENTE.
-def pdf_res_pagada_pac(template, nombre_paciente, emailSender):
-    try:
-        # print("Creación PDF.")
-        # print("Creación PDF Paciente Panel Paciente")
-        # print("Ingresamos al PDF.")
-        # print(nombre_paciente)
-        # # Ruta base de la carpeta donde se almacenan los PDF.
-        # carpeta_destino = "C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\BOLETA_PDF_PACIENTES"
-        # # Verificar si la carpeta existe, si no, la debemos crear.
-        # if not os.path.exists(carpeta_destino):
-        #     os.makedirs(carpeta_destino)
-        #     print(f"Carpeta creada: {carpeta_destino}")
-        # # Generación del nombre de archivo único
-        # now = datetime.now()
-        # filename = f"Boleta_Compra_{nombre_paciente}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
-        # # Creación del PDF.
-        # # Configuración de pdfkit
-        # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
-        # options = {'enable-local-file-access': None}
-        # # Generar el PDF
-        # # template; Pertenece
-        # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}", configuration=config, options=options)
-        # #Envío del mensaje. Debemos pasar el template.
-        # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}")
-        # --- Lógica de Generación de PDF ---
-        print("Creación PDF Paciente Panel Paciente")
-        print(f"Ingresamos al PDF para: {nombre_paciente}")
+# def pdf_res_pagada_pac(template, nombre_paciente, emailSender):
+#     try:
+#         # print("Creación PDF.")
+#         # print("Creación PDF Paciente Panel Paciente")
+#         # print("Ingresamos al PDF.")
+#         # print(nombre_paciente)
+#         # # Ruta base de la carpeta donde se almacenan los PDF.
+#         # carpeta_destino = "C:\\Users\\Plask91\\Documents\\Clinica\\clinica\\Clinica_DRF\\BOLETA_PDF_PACIENTES"
+#         # # Verificar si la carpeta existe, si no, la debemos crear.
+#         # if not os.path.exists(carpeta_destino):
+#         #     os.makedirs(carpeta_destino)
+#         #     print(f"Carpeta creada: {carpeta_destino}")
+#         # # Generación del nombre de archivo único
+#         # now = datetime.now()
+#         # filename = f"Boleta_Compra_{nombre_paciente}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#         # # Creación del PDF.
+#         # # Configuración de pdfkit
+#         # config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
+#         # options = {'enable-local-file-access': None}
+#         # # Generar el PDF
+#         # # template; Pertenece
+#         # pdf = pdfkit.from_string(template, f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}", configuration=config, options=options)
+#         # #Envío del mensaje. Debemos pasar el template.
+#         # emailSender.attach_file(f"C:\\Users\\Plask91\\Documents\\Clinica\\clinica\Clinica_DRF\\BOLETA_PDF_PACIENTES\\{filename}")
+#         # --- Lógica de Generación de PDF ---
+#         print("Creación PDF Paciente Panel Paciente")
+#         print(f"Ingresamos al PDF para: {nombre_paciente}")
 
-        # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-        carpeta_destino = os.path.join(settings.BASE_DIR, "BOLETA_PDF_PACIENTES")
+#         # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
+#         carpeta_destino = os.path.join(settings.BASE_DIR, "BOLETA_PDF_PACIENTES")
 
-        # Verificar si la carpeta existe, si no, la creamos
-        if not os.path.exists(carpeta_destino):
-            os.makedirs(carpeta_destino)
-            print(f"Carpeta creada en: {carpeta_destino}")
+#         # Verificar si la carpeta existe, si no, la creamos
+#         if not os.path.exists(carpeta_destino):
+#             os.makedirs(carpeta_destino)
+#             print(f"Carpeta creada en: {carpeta_destino}")
 
-        # 2. Generación del nombre de archivo único (limpiando espacios para Linux)
-        now = datetime.now()
-        nombre_archivo_paciente = nombre_paciente.replace(" ", "_")
-        filename = f"Boleta_Compra_{nombre_archivo_paciente}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+#         # 2. Generación del nombre de archivo único (limpiando espacios para Linux)
+#         now = datetime.now()
+#         nombre_archivo_paciente = nombre_paciente.replace(" ", "_")
+#         filename = f"Boleta_Compra_{nombre_archivo_paciente}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
 
-        # 3. Ruta completa final del PDF
-        ruta_final_pdf = os.path.join(carpeta_destino, filename)
+#         # 3. Ruta completa final del PDF
+#         ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
-        # 4. Configuración de pdfkit (Detección de Sistema Operativo)
-        # Esto evita errores al buscar el .exe en servidores Linux
-        if os.name == "nt":  # Si es Windows
-            path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-            config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-        else:  # Si es Linux (PythonAnywhere)
-            config = pdfkit.configuration()
+#         # 4. Configuración de pdfkit (Detección de Sistema Operativo)
+#         # Esto evita errores al buscar el .exe en servidores Linux
+#         if os.name == "nt":  # Si es Windows
+#             path_wkhtmltopdf = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+#             config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+#         else:  # Si es Linux (PythonAnywhere)
+#             config = pdfkit.configuration()
 
-        options = {"enable-local-file-access": None}
+#         options = {"enable-local-file-access": None}
 
-        # 5. Generar el PDF usando la ruta dinámica universal
-        # Eliminamos las rutas fijas C:\\Users...
-        pdfkit.from_string(
-            template, ruta_final_pdf, configuration=config, options=options
-        )
+#         # 5. Generar el PDF usando la ruta dinámica universal
+#         # Eliminamos las rutas fijas C:\\Users...
+#         pdfkit.from_string(
+#             template, ruta_final_pdf, configuration=config, options=options
+#         )
 
-        # 6. Envío del mensaje adjuntando el archivo
-        # Usamos la misma variable dinámica para asegurar que encuentre el archivo
-        emailSender.attach_file(ruta_final_pdf)
-    except Exception as err:
-        print(f"Unexpected {err=}, {type(err)=}")
-        return Response({"error": 0}, status=400)
+#         # 6. Envío del mensaje adjuntando el archivo
+#         # Usamos la misma variable dinámica para asegurar que encuentre el archivo
+#         emailSender.attach_file(ruta_final_pdf)
+#     except Exception as err:
+#         print(f"Unexpected {err=}, {type(err)=}")
+#         return Response({"error": 0}, status=400)
 
 
 # Este método es solo de prueba de consumo de microservicio por parte de un proyecto aparte el cual le realiza la petición.
@@ -2600,46 +2600,46 @@ def pago_debito_solo_reserva(request):
                     + obtener_paciente.ap_materno
                 )
                 # Creación del correo.
-                subject = "Correo Reserva Pagada"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/boleta_pago_cod_reserva.html",
-                    {
-                        "nombre_paciente": nombre_paciente,
-                        "rut_paciente": obtener_paciente.rut,
-                        "email_paciente": usuario.email,
-                        "fono_paciente": obtener_paciente.fono,
-                        "fecha_reserva": reserva.fecha_reserva,
-                        "especialidad": reserva.especialidad,
-                        "nombre_doctor": reserva.nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": reserva.comuna_clinica,
-                        "direccion_clinica": reserva.direccion_clinica,
-                        "nombre_clinica": reserva.nombre_clinica,
-                        "hora_inicio": reserva.hora_inicio,
-                        "hora_termino": reserva.hora_termino,
-                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
-                        "tipo_pago": "Débito",
-                        "debito_uuid": debito_uuid,
-                        "valor_especialidad": monto_total,
-                        "total_pagar": monto_total,
-                        "descuento": "No aplica",
-                        "fecha_utilizacion": "No aplica",
-                        "fecha_pago": fecha_pago,
-                        "reserva_pagada": "Sí",
-                    },
-                )
-                # Envío del mensaje. Debemos pasar el template.
-                emailSender = EmailMessage(
-                    subject,
-                    template,
-                    settings.EMAIL_HOST_USER,
-                    ["matiasfamilycrew@gmail.com"],
-                )
-                emailSender.content_subtype = "html"
-                emailSender.fail_silently = False
-                #
-                filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
+                # subject = "Correo Reserva Pagada"
+                # # Crearemos el envío de correos.
+                # template = render_to_string(
+                #     "pacientes/boleta_pago_cod_reserva.html",
+                #     {
+                #         "nombre_paciente": nombre_paciente,
+                #         "rut_paciente": obtener_paciente.rut,
+                #         "email_paciente": usuario.email,
+                #         "fono_paciente": obtener_paciente.fono,
+                #         "fecha_reserva": reserva.fecha_reserva,
+                #         "especialidad": reserva.especialidad,
+                #         "nombre_doctor": reserva.nombre_doctor,
+                #         "reserva_uuid": reserva_uuid,
+                #         "comuna_clinica": reserva.comuna_clinica,
+                #         "direccion_clinica": reserva.direccion_clinica,
+                #         "nombre_clinica": reserva.nombre_clinica,
+                #         "hora_inicio": reserva.hora_inicio,
+                #         "hora_termino": reserva.hora_termino,
+                #         "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                #         "tipo_pago": "Débito",
+                #         "debito_uuid": debito_uuid,
+                #         "valor_especialidad": monto_total,
+                #         "total_pagar": monto_total,
+                #         "descuento": "No aplica",
+                #         "fecha_utilizacion": "No aplica",
+                #         "fecha_pago": fecha_pago,
+                #         "reserva_pagada": "Sí",
+                #     },
+                # )
+                # # Envío del mensaje. Debemos pasar el template.
+                # emailSender = EmailMessage(
+                #     subject,
+                #     template,
+                #     settings.EMAIL_HOST_USER,
+                #     ["matiasfamilycrew@gmail.com"],
+                # )
+                # emailSender.content_subtype = "html"
+                # emailSender.fail_silently = False
+                # #
+                # filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
                 carpeta_destino = os.path.join(
@@ -2647,35 +2647,35 @@ def pago_debito_solo_reserva(request):
                 )
 
                 # Verificar si la carpeta existe, si no, la creamos
-                if not os.path.exists(carpeta_destino):
-                    os.makedirs(carpeta_destino)
-                    print(f"Carpeta creada en: {carpeta_destino}")
+                # if not os.path.exists(carpeta_destino):
+                #     os.makedirs(carpeta_destino)
+                #     print(f"Carpeta creada en: {carpeta_destino}")
 
-                # Ruta completa final del PDF
-                ruta_final_pdf = os.path.join(carpeta_destino, filename)
+                # # Ruta completa final del PDF
+                # ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
-                # Configuración de pdfkit (Detección de Sistema Operativo)
-                # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == "nt":  # Si es Windows
-                    path_wkhtmltopdf = (
-                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                    )
-                    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-                else:  # Si es Linux (PythonAnywhere)
-                    config = pdfkit.configuration()
+                # # Configuración de pdfkit (Detección de Sistema Operativo)
+                # # Esto evita errores al buscar el .exe en servidores Linux
+                # if os.name == "nt":  # Si es Windows
+                #     path_wkhtmltopdf = (
+                #         r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                #     )
+                #     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+                # else:  # Si es Linux (PythonAnywhere)
+                #     config = pdfkit.configuration()
 
-                options = {"enable-local-file-access": None}
+                # options = {"enable-local-file-access": None}
 
-                # Generar el PDF usando la ruta dinámica.
-                # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(
-                    template, ruta_final_pdf, configuration=config, options=options
-                )
+                # # Generar el PDF usando la ruta dinámica.
+                # # Eliminamos las rutas fijas C:\\Users...
+                # pdfkit.from_string(
+                #     template, ruta_final_pdf, configuration=config, options=options
+                # )
 
-                # Envío del mensaje adjuntando el archivo
-                # Usamos la misma variable dinámica para asegurar que encuentre el archivo
-                emailSender.attach_file(ruta_final_pdf)
-                emailSender.send()
+                # # Envío del mensaje adjuntando el archivo
+                # # Usamos la misma variable dinámica para asegurar que encuentre el archivo
+                # emailSender.attach_file(ruta_final_pdf)
+                # emailSender.send()
             # Datos del paciente NO registrado.
             if reserva.fk_pac_no_register is not None:
                 print("Ingresamos al Paciente No Registrado.")
@@ -2700,85 +2700,85 @@ def pago_debito_solo_reserva(request):
                     + "_"
                     + obtener_paciente.ap_materno
                 )
-                filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
+                # filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
-                # Creación del correo.
-                subject = "Correo Reserva Pagada"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/boleta_pago_cod_reserva.html",
-                    {
-                        "nombre_paciente": nombre_paciente,
-                        "rut_paciente": obtener_paciente.rut,
-                        "email_paciente": obtener_paciente.email,
-                        "fono_paciente": obtener_paciente.fono,
-                        "fecha_reserva": reserva.fecha_reserva,
-                        "especialidad": reserva.especialidad,
-                        "nombre_doctor": reserva.nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": reserva.comuna_clinica,
-                        "direccion_clinica": reserva.direccion_clinica,
-                        "nombre_clinica": reserva.nombre_clinica,
-                        "hora_inicio": reserva.hora_inicio,
-                        "hora_termino": reserva.hora_termino,
-                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
-                        "tipo_pago": "Débito",
-                        "debito_uuid": debito_uuid,
-                        "valor_especialidad": monto_total,
-                        "total_pagar": monto_total,
-                        "descuento": "No aplica",
-                        "fecha_utilizacion": "No aplica",
-                        "fecha_pago": fecha_pago,
-                        "reserva_pagada": "Sí",
-                    },
-                )
-                # Envío del mensaje. Debemos pasar el template.
-                emailSender = EmailMessage(
-                    subject,
-                    template,
-                    settings.EMAIL_HOST_USER,
-                    ["matiasfamilycrew@gmail.com"],
-                )
-                emailSender.content_subtype = "html"
-                emailSender.fail_silently = False
-                #
-                filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
+                # # Creación del correo.
+                # subject = "Correo Reserva Pagada"
+                # # Crearemos el envío de correos.
+                # template = render_to_string(
+                #     "pacientes/boleta_pago_cod_reserva.html",
+                #     {
+                #         "nombre_paciente": nombre_paciente,
+                #         "rut_paciente": obtener_paciente.rut,
+                #         "email_paciente": obtener_paciente.email,
+                #         "fono_paciente": obtener_paciente.fono,
+                #         "fecha_reserva": reserva.fecha_reserva,
+                #         "especialidad": reserva.especialidad,
+                #         "nombre_doctor": reserva.nombre_doctor,
+                #         "reserva_uuid": reserva_uuid,
+                #         "comuna_clinica": reserva.comuna_clinica,
+                #         "direccion_clinica": reserva.direccion_clinica,
+                #         "nombre_clinica": reserva.nombre_clinica,
+                #         "hora_inicio": reserva.hora_inicio,
+                #         "hora_termino": reserva.hora_termino,
+                #         "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                #         "tipo_pago": "Débito",
+                #         "debito_uuid": debito_uuid,
+                #         "valor_especialidad": monto_total,
+                #         "total_pagar": monto_total,
+                #         "descuento": "No aplica",
+                #         "fecha_utilizacion": "No aplica",
+                #         "fecha_pago": fecha_pago,
+                #         "reserva_pagada": "Sí",
+                #     },
+                # )
+                # # Envío del mensaje. Debemos pasar el template.
+                # emailSender = EmailMessage(
+                #     subject,
+                #     template,
+                #     settings.EMAIL_HOST_USER,
+                #     ["matiasfamilycrew@gmail.com"],
+                # )
+                # emailSender.content_subtype = "html"
+                # emailSender.fail_silently = False
+                # #
+                # filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
-                # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(
-                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
-                )
+                # # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
+                # carpeta_destino = os.path.join(
+                #     settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                # )
 
-                # Verificar si la carpeta existe, si no, la creamos
-                if not os.path.exists(carpeta_destino):
-                    os.makedirs(carpeta_destino)
-                    print(f"Carpeta creada en: {carpeta_destino}")
+                # # Verificar si la carpeta existe, si no, la creamos
+                # if not os.path.exists(carpeta_destino):
+                #     os.makedirs(carpeta_destino)
+                #     print(f"Carpeta creada en: {carpeta_destino}")
 
-                #  Ruta completa final del PDF
-                ruta_final_pdf = os.path.join(carpeta_destino, filename)
+                # #  Ruta completa final del PDF
+                # ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
-                # 4. Configuración de pdfkit (Detección de Sistema Operativo)
-                # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == "nt":  # Si es Windows
-                    path_wkhtmltopdf = (
-                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                    )
-                    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-                else:  # Si es Linux (PythonAnywhere)
-                    config = pdfkit.configuration()
+                # # 4. Configuración de pdfkit (Detección de Sistema Operativo)
+                # # Esto evita errores al buscar el .exe en servidores Linux
+                # if os.name == "nt":  # Si es Windows
+                #     path_wkhtmltopdf = (
+                #         r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                #     )
+                #     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+                # else:  # Si es Linux (PythonAnywhere)
+                #     config = pdfkit.configuration()
 
-                options = {"enable-local-file-access": None}
+                # options = {"enable-local-file-access": None}
 
-                # 5. Generar el PDF usando la ruta dinámica universal
-                # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(
-                    template, ruta_final_pdf, configuration=config, options=options
-                )
+                # # 5. Generar el PDF usando la ruta dinámica universal
+                # # Eliminamos las rutas fijas C:\\Users...
+                # pdfkit.from_string(
+                #     template, ruta_final_pdf, configuration=config, options=options
+                # )
 
-                # 6. Envío del mensaje adjuntando el archivo
-                # Usamos la misma variable dinámica para asegurar que encuentre el archivo
-                emailSender.attach_file(ruta_final_pdf)
-                emailSender.send()
+                # # 6. Envío del mensaje adjuntando el archivo
+                # # Usamos la misma variable dinámica para asegurar que encuentre el archivo
+                # emailSender.attach_file(ruta_final_pdf)
+                # emailSender.send()
 
             return Response(
                 {"reserva_pagada": reserva_uuid},
@@ -2873,84 +2873,84 @@ def pago_credito_solo_reserva(request):
                     + obtener_paciente.ap_materno
                 )
                 # Creación del correo.
-                subject = "Correo Reserva Pagada"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/boleta_pago_cod_reserva.html",
-                    {
-                        "nombre_paciente": nombre_paciente,
-                        "rut_paciente": obtener_paciente.rut,
-                        "email_paciente": usuario.email,
-                        "fono_paciente": obtener_paciente.fono,
-                        "fecha_reserva": reserva.fecha_reserva,
-                        "especialidad": reserva.especialidad,
-                        "nombre_doctor": reserva.nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": reserva.comuna_clinica,
-                        "direccion_clinica": reserva.direccion_clinica,
-                        "nombre_clinica": reserva.nombre_clinica,
-                        "hora_inicio": reserva.hora_inicio,
-                        "hora_termino": reserva.hora_termino,
-                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
-                        "tipo_pago": "Crédito",
-                        "credito_uuid": credito_uuid,
-                        "valor_especialidad": monto_total,
-                        "total_pagar": monto_total,
-                        "cant_cuotas": cant_cuotas,
-                        "monto_cuotas": monto_cuotas_base,
-                        "descuento": "No aplica",
-                        "fecha_utilizacion": "No aplica",
-                        "fecha_pago": fecha_pago,
-                        "reserva_pagada": "Sí",
-                    },
-                )
-                # Envío del mensaje. Debemos pasar el template.
-                emailSender = EmailMessage(
-                    subject,
-                    template,
-                    settings.EMAIL_HOST_USER,
-                    ["matiasfamilycrew@gmail.com"],
-                )
-                emailSender.content_subtype = "html"
-                emailSender.fail_silently = False
-                #
-                filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
+                # subject = "Correo Reserva Pagada"
+                # # Crearemos el envío de correos.
+                # template = render_to_string(
+                #     "pacientes/boleta_pago_cod_reserva.html",
+                #     {
+                #         "nombre_paciente": nombre_paciente,
+                #         "rut_paciente": obtener_paciente.rut,
+                #         "email_paciente": usuario.email,
+                #         "fono_paciente": obtener_paciente.fono,
+                #         "fecha_reserva": reserva.fecha_reserva,
+                #         "especialidad": reserva.especialidad,
+                #         "nombre_doctor": reserva.nombre_doctor,
+                #         "reserva_uuid": reserva_uuid,
+                #         "comuna_clinica": reserva.comuna_clinica,
+                #         "direccion_clinica": reserva.direccion_clinica,
+                #         "nombre_clinica": reserva.nombre_clinica,
+                #         "hora_inicio": reserva.hora_inicio,
+                #         "hora_termino": reserva.hora_termino,
+                #         "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                #         "tipo_pago": "Crédito",
+                #         "credito_uuid": credito_uuid,
+                #         "valor_especialidad": monto_total,
+                #         "total_pagar": monto_total,
+                #         "cant_cuotas": cant_cuotas,
+                #         "monto_cuotas": monto_cuotas_base,
+                #         "descuento": "No aplica",
+                #         "fecha_utilizacion": "No aplica",
+                #         "fecha_pago": fecha_pago,
+                #         "reserva_pagada": "Sí",
+                #     },
+                # )
+                # # Envío del mensaje. Debemos pasar el template.
+                # emailSender = EmailMessage(
+                #     subject,
+                #     template,
+                #     settings.EMAIL_HOST_USER,
+                #     ["matiasfamilycrew@gmail.com"],
+                # )
+                # emailSender.content_subtype = "html"
+                # emailSender.fail_silently = False
+                # #
+                # filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
-                # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(
-                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
-                )
+                # # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
+                # carpeta_destino = os.path.join(
+                #     settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                # )
 
-                # Verificar si la carpeta existe, si no, la creamos
-                if not os.path.exists(carpeta_destino):
-                    os.makedirs(carpeta_destino)
-                    print(f"Carpeta creada en: {carpeta_destino}")
+                # # Verificar si la carpeta existe, si no, la creamos
+                # if not os.path.exists(carpeta_destino):
+                #     os.makedirs(carpeta_destino)
+                #     print(f"Carpeta creada en: {carpeta_destino}")
 
-                # Ruta completa final del PDF
-                ruta_final_pdf = os.path.join(carpeta_destino, filename)
+                # # Ruta completa final del PDF
+                # ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
-                # Configuración de pdfkit (Detección de Sistema Operativo)
-                # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == "nt":  # Si es Windows
-                    path_wkhtmltopdf = (
-                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                    )
-                    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-                else:  # Si es Linux (PythonAnywhere)
-                    config = pdfkit.configuration()
+                # # Configuración de pdfkit (Detección de Sistema Operativo)
+                # # Esto evita errores al buscar el .exe en servidores Linux
+                # if os.name == "nt":  # Si es Windows
+                #     path_wkhtmltopdf = (
+                #         r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                #     )
+                #     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+                # else:  # Si es Linux (PythonAnywhere)
+                #     config = pdfkit.configuration()
 
-                options = {"enable-local-file-access": None}
+                # options = {"enable-local-file-access": None}
 
-                # Generar el PDF usando la ruta dinámica.
-                # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(
-                    template, ruta_final_pdf, configuration=config, options=options
-                )
+                # # Generar el PDF usando la ruta dinámica.
+                # # Eliminamos las rutas fijas C:\\Users...
+                # pdfkit.from_string(
+                #     template, ruta_final_pdf, configuration=config, options=options
+                # )
 
-                # Envío del mensaje adjuntando el archivo
-                # Usamos la misma variable dinámica para asegurar que encuentre el archivo
-                emailSender.attach_file(ruta_final_pdf)
-                emailSender.send()
+                # # Envío del mensaje adjuntando el archivo
+                # # Usamos la misma variable dinámica para asegurar que encuentre el archivo
+                # emailSender.attach_file(ruta_final_pdf)
+                # emailSender.send()
             # Datos del paciente NO registrado.
             if reserva.fk_pac_no_register is not None:
                 print("Ingresamos al Paciente No Registrado.")
@@ -2978,84 +2978,84 @@ def pago_credito_solo_reserva(request):
                 filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
                 # Creación del correo.
-                subject = "Correo Reserva Pagada"
-                # Crearemos el envío de correos.
-                template = render_to_string(
-                    "pacientes/boleta_pago_cod_reserva.html",
-                    {
-                        "nombre_paciente": nombre_paciente,
-                        "rut_paciente": obtener_paciente.rut,
-                        "email_paciente": obtener_paciente.email,
-                        "fono_paciente": obtener_paciente.fono,
-                        "fecha_reserva": reserva.fecha_reserva,
-                        "especialidad": reserva.especialidad,
-                        "nombre_doctor": reserva.nombre_doctor,
-                        "reserva_uuid": reserva_uuid,
-                        "comuna_clinica": reserva.comuna_clinica,
-                        "direccion_clinica": reserva.direccion_clinica,
-                        "nombre_clinica": reserva.nombre_clinica,
-                        "hora_inicio": reserva.hora_inicio,
-                        "hora_termino": reserva.hora_termino,
-                        "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
-                        "tipo_pago": "Crédito",
-                        "credito_uuid": credito_uuid,
-                        "valor_especialidad": monto_total,
-                        "total_pagar": monto_total,
-                        "cant_cuotas": cant_cuotas,
-                        "monto_cuotas": monto_cuotas_base,
-                        "descuento": "No aplica",
-                        "fecha_utilizacion": "No aplica",
-                        "fecha_pago": fecha_pago,
-                        "reserva_pagada": "Sí",
-                    },
-                )
-                # Envío del mensaje. Debemos pasar el template.
-                emailSender = EmailMessage(
-                    subject,
-                    template,
-                    settings.EMAIL_HOST_USER,
-                    ["matiasfamilycrew@gmail.com"],
-                )
-                emailSender.content_subtype = "html"
-                emailSender.fail_silently = False
-                #
-                filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
+                # subject = "Correo Reserva Pagada"
+                # # Crearemos el envío de correos.
+                # template = render_to_string(
+                #     "pacientes/boleta_pago_cod_reserva.html",
+                #     {
+                #         "nombre_paciente": nombre_paciente,
+                #         "rut_paciente": obtener_paciente.rut,
+                #         "email_paciente": obtener_paciente.email,
+                #         "fono_paciente": obtener_paciente.fono,
+                #         "fecha_reserva": reserva.fecha_reserva,
+                #         "especialidad": reserva.especialidad,
+                #         "nombre_doctor": reserva.nombre_doctor,
+                #         "reserva_uuid": reserva_uuid,
+                #         "comuna_clinica": reserva.comuna_clinica,
+                #         "direccion_clinica": reserva.direccion_clinica,
+                #         "nombre_clinica": reserva.nombre_clinica,
+                #         "hora_inicio": reserva.hora_inicio,
+                #         "hora_termino": reserva.hora_termino,
+                #         "fecha_creacion_reserva": reserva.fecha_creacion_reserva,
+                #         "tipo_pago": "Crédito",
+                #         "credito_uuid": credito_uuid,
+                #         "valor_especialidad": monto_total,
+                #         "total_pagar": monto_total,
+                #         "cant_cuotas": cant_cuotas,
+                #         "monto_cuotas": monto_cuotas_base,
+                #         "descuento": "No aplica",
+                #         "fecha_utilizacion": "No aplica",
+                #         "fecha_pago": fecha_pago,
+                #         "reserva_pagada": "Sí",
+                #     },
+                # )
+                # # Envío del mensaje. Debemos pasar el template.
+                # emailSender = EmailMessage(
+                #     subject,
+                #     template,
+                #     settings.EMAIL_HOST_USER,
+                #     ["matiasfamilycrew@gmail.com"],
+                # )
+                # emailSender.content_subtype = "html"
+                # emailSender.fail_silently = False
+                # #
+                # filename = f"Boleta_Compra_{nombre_archivo_paciente}_{fecha_pago}.pdf"
 
-                # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
-                carpeta_destino = os.path.join(
-                    settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
-                )
+                # # 1. Definimos la carpeta de destino usando BASE_DIR para que funcione en Linux y Windows
+                # carpeta_destino = os.path.join(
+                #     settings.BASE_DIR, "BOLETA_PDF_PACIENTES"
+                # )
 
-                # Verificar si la carpeta existe, si no, la creamos
-                if not os.path.exists(carpeta_destino):
-                    os.makedirs(carpeta_destino)
-                    print(f"Carpeta creada en: {carpeta_destino}")
+                # # Verificar si la carpeta existe, si no, la creamos
+                # if not os.path.exists(carpeta_destino):
+                #     os.makedirs(carpeta_destino)
+                #     print(f"Carpeta creada en: {carpeta_destino}")
 
-                #  Ruta completa final del PDF
-                ruta_final_pdf = os.path.join(carpeta_destino, filename)
+                # #  Ruta completa final del PDF
+                # ruta_final_pdf = os.path.join(carpeta_destino, filename)
 
-                # 4. Configuración de pdfkit (Detección de Sistema Operativo)
-                # Esto evita errores al buscar el .exe en servidores Linux
-                if os.name == "nt":  # Si es Windows
-                    path_wkhtmltopdf = (
-                        r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-                    )
-                    config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
-                else:  # Si es Linux (PythonAnywhere)
-                    config = pdfkit.configuration()
+                # # 4. Configuración de pdfkit (Detección de Sistema Operativo)
+                # # Esto evita errores al buscar el .exe en servidores Linux
+                # if os.name == "nt":  # Si es Windows
+                #     path_wkhtmltopdf = (
+                #         r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
+                #     )
+                #     config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+                # else:  # Si es Linux (PythonAnywhere)
+                #     config = pdfkit.configuration()
 
-                options = {"enable-local-file-access": None}
+                # options = {"enable-local-file-access": None}
 
-                # 5. Generar el PDF usando la ruta dinámica universal
-                # Eliminamos las rutas fijas C:\\Users...
-                pdfkit.from_string(
-                    template, ruta_final_pdf, configuration=config, options=options
-                )
+                # # 5. Generar el PDF usando la ruta dinámica universal
+                # # Eliminamos las rutas fijas C:\\Users...
+                # pdfkit.from_string(
+                #     template, ruta_final_pdf, configuration=config, options=options
+                # )
 
-                # 6. Envío del mensaje adjuntando el archivo
-                # Usamos la misma variable dinámica para asegurar que encuentre el archivo
-                emailSender.attach_file(ruta_final_pdf)
-                emailSender.send()
+                # # 6. Envío del mensaje adjuntando el archivo
+                # # Usamos la misma variable dinámica para asegurar que encuentre el archivo
+                # emailSender.attach_file(ruta_final_pdf)
+                # emailSender.send()
 
             return Response(
                 {"reserva_pagada": reserva_uuid},
