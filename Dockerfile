@@ -66,4 +66,4 @@ COPY . .
 
 # Comando para iniciar la aplicación en producción.
 # (Nota: En un futuro, aquí debo cambiar "runserver" por un servidor real como Gunicorn).
-CMD ["python", "Clinica_DRF/manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "Clinica_DRF.wsgi:application"]

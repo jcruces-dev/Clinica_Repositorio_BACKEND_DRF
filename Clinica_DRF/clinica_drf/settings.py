@@ -49,6 +49,7 @@ ALLOWED_HOSTS = env.list(
         "dev.clinica.jair-dev.cl",
         # Estos son mis dominios reales (Sub-Dominios).
         "test.clinica.jair-dev.cl",
+        "prod.clinica.jair-dev.cl",
         "jacruces91.pythonanywhere.com",
     ],
 )
