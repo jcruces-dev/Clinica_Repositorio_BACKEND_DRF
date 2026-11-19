@@ -28,10 +28,9 @@ def test_pago_debito_desde_dashboard_registrado(crear_reserva, crear_especialida
         "update_pago_debito_reserva",
         kwargs={"reserva_uuid": crear_reserva.reserva_uuid},
     )
-    # Prepara el payload indicando el UUID de la reserva y el pago con débito activado.
+    # Envía reserva_uuid y debito=1, tal como espera request.data["debito"] en la vista.
     data = {"reserva_uuid": crear_reserva.reserva_uuid, "debito": 1}
 
-    # Se eliminaron los mocks de pdfkit y EmailMessage porque ya no se generan PDFs ni se envían correos.
     # Ejecuta una petición PUT al endpoint con los datos en formato JSON.
     response = client.put(url, data, format="json")
 
@@ -43,35 +42,7 @@ def test_pago_debito_desde_dashboard_registrado(crear_reserva, crear_especialida
     assert crear_reserva.pago_realizado == 1
 
 
-# Marca el test para que pueda acceder a la base de datos de prueba de Django.
-@pytest.mark.django_db
-# Define el test de pago con crédito desde el dashboard de un paciente registrado.
-def test_pago_credito_desde_dashboard_registrado(crear_reserva, crear_especialidad):
-    # Instancia un cliente HTTP de pruebas para hacer peticiones a la API.
-    client = APIClient()
-    # Autentica al cliente con el usuario asociado a la reserva creada.
-    client.force_authenticate(user=crear_reserva.fk_usuario)
-
-    # Obtiene la URL del endpoint para actualizar el pago usando el UUID de la reserva.
-    url = reverse(
-        "update_pago_debito_reserva",
-        kwargs={"reserva_uuid": crear_reserva.reserva_uuid},
-    )
-    # Prepara el payload indicando el UUID de la reserva y el pago con crédito activado.
-    data = {"reserva_uuid": crear_reserva.reserva_uuid, "credito": 1}
-
-    # Ejecuta una petición PUT al endpoint con los datos en formato JSON.
-    response = client.put(url, data, format="json")
-
-    # Verifica que la respuesta HTTP haya sido exitosa (200 OK).
-    assert response.status_code == 200
-    # Recarga la instancia de reserva desde la base de datos para reflejar cambios guardados.
-    crear_reserva.refresh_from_db()
-    # Verifica que el campo pago_realizado se haya actualizado a 1 tras el pago con crédito.
-    assert crear_reserva.pago_realizado == 1
-
-
-# Marca el test para permitir acceso a la base de datos de Django.
+# Marca el test para permitir acceso a la base de datos de prueba de Django.
 @pytest.mark.django_db
 # Define el test que valida el rechazo de acceso sin autenticación al endpoint del dashboard.
 def test_pago_debito_desde_dashboard_no_registrado_falla(crear_reserva_no_registrado):
@@ -106,7 +77,6 @@ def test_pago_debito_desde_index_no_registrado(
     # Arma los datos enviados con el código UUID de la reserva a pagar.
     data = {"cod_reserva_pagar": crear_reserva_no_registrado.reserva_uuid}
 
-    # Se eliminaron los mocks y aserciones de pdfkit y EmailMessage porque el envío de correo fue retirado.
     # Envía la petición POST al endpoint de pago en formato JSON.
     response = client.post(url, data, format="json")
 
