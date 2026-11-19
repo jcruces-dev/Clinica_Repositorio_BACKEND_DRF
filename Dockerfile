@@ -51,19 +51,20 @@ CMD ["python", "Clinica_DRF/manage.py", "runserver", "0.0.0.0:8000"]
 # ==============================================================================
 # ETAPA 3: PRODUCCIÓN (Ligera, segura y sin herramientas de testing)
 # ==============================================================================
-# Nombramos esta etapa "production" para que el pipeline de CI/CD la use.
 FROM base AS production
 
 # Copiamos ÚNICAMENTE el requirements.txt (sin las herramientas de desarrollo)
 COPY Clinica_DRF/requirements.txt .
 
-# Actualizamos pip e instalamos SOLO lo necesario para que la app funcione en producción.
+# Instalamos dependencias de producción (incluyendo gunicorn==23.0.0)
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copiamos todo el proyecto del backend dentro de /app del contenedor
 COPY . .
 
-# Comando para iniciar la aplicación en producción.
-# (Nota: En un futuro, aquí debo cambiar "runserver" por un servidor real como Gunicorn).
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "Clinica_DRF.wsgi:application"]
+# Nos posicionamos donde vive manage.py y el paquete clinica_drf/
+WORKDIR /app/Clinica_DRF
+
+# Arrancamos Gunicorn sirviendo clinica_drf.wsgi:application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-", "clinica_drf.wsgi:application"]
