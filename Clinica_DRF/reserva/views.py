@@ -670,7 +670,7 @@ def pago_credito_reserva_index(request):
                 if pago_credito.is_valid():
                     pago_credito.save()
                     # Correo más PDF, para el usuario registrao por el rut.
-                    generar_correo_reserv_index(reserva_uuid, "1")
+                    # generar_correo_reserv_index(reserva_uuid, "1")
                     # Filtración de las Reservas.
                     reser = ReservaModel.objects.filter(
                         nombre_doctor=nombre_doctor,
@@ -1768,7 +1768,7 @@ def update_pago_debito_reserva(request, reserva_uuid):
                                 )
                                 if insertar_desc.is_valid():
                                     insertar_desc.save()
-                                    correo_res_pagada(reserva_uuid, cod.id)
+                                    # correo_res_pagada(reserva_uuid, cod.id)
                                     return Response(
                                         {"success": 1},
                                         # Específicamos el status.
@@ -1812,7 +1812,7 @@ def update_pago_debito_reserva(request, reserva_uuid):
                     if insert_debito.is_valid():
                         insert_debito.save()
                         # Dato para crear el email.
-                        correo_res_pagada(reserva_uuid, 0)
+                        # correo_res_pagada(reserva_uuid, 0)
                         return Response(
                             {"success": 1},
                             # Específicamos el status.
@@ -1939,7 +1939,7 @@ def update_pago_credito_reserva(request, reserva_uuid):
                                 )
                                 if insertar_desc.is_valid():
                                     insertar_desc.save()
-                                    correo_res_pagada(reserva_uuid, id_descuento)
+                                    # correo_res_pagada(reserva_uuid, id_descuento)
                                     return Response(
                                         {"success": 1},
                                         # Específicamos el status.
@@ -1991,7 +1991,7 @@ def update_pago_credito_reserva(request, reserva_uuid):
                     if insert_credito.is_valid():
                         insert_credito.save()
                         # Dato para crear el email.
-                        correo_res_pagada(reserva_uuid, 0)
+                        # correo_res_pagada(reserva_uuid, 0)
                         return Response(
                             {"success": 1},
                             # Específicamos el status.
