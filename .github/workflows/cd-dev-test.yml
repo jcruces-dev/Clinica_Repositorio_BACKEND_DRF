@@ -40,7 +40,7 @@ jobs:
       # --- METADATOS PARA LA IMAGEN DE PRODUCCIÓN ---
       - name: Extraer metadatos (Prod)
         id: meta-prod
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME_PROD }}
           tags: |
@@ -50,7 +50,7 @@ jobs:
       # --- METADATOS PARA LA IMAGEN DE DESARROLLO ---
       - name: Extraer metadatos (Dev)
         id: meta-dev
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME_DEV }}
           tags: |
