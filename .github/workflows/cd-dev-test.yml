@@ -1,119 +1,210 @@
-# Nombre del workflow. Aparecerá en la pestaña "Actions" de GitHub.
+# ==========================================================
+# WORKFLOW: CD - Deploy automático a Dev y Test
+# ==========================================================
+# Este pipeline:
+# 1. Ejecuta los tests.
+# 2. Construye imagen DEV y PROD.
+# 3. Publica ambas imágenes en GHCR.
+# 4. Actualiza automáticamente los manifiestos Kubernetes
+#    de Dev y Test (GitOps).
+# ==========================================================
+
 name: 2. CD - Deploy to Dev & Test
 
-# Define CUÁNDO se ejecuta este workflow.
+# ----------------------------------------------------------
+# CUÁNDO SE EJECUTA
+# ----------------------------------------------------------
 on:
+  # Cada push a main dispara el pipeline
   push:
-    branches: [ main ]
+    branches:
+      - main
+
+  # Permite ejecutarlo manualmente desde Actions
   workflow_dispatch:
 
-# Variables de entorno globales para todo el workflow.
+# ----------------------------------------------------------
+# VARIABLES GLOBALES
+# ----------------------------------------------------------
 env:
-  # Imagen base para PRODUCCIÓN (sin Faker, ultra ligera)
+
+  # Imagen de producción
   IMAGE_NAME_PROD: ghcr.io/jcruces-dev/backend-clinica-bp
-  # Imagen base para DESARROLLO/TEST (con Faker, Pytest, Mock)
+
+  # Imagen de desarrollo y testing
   IMAGE_NAME_DEV: ghcr.io/jcruces-dev/backend-clinica-bp-dev
 
+# ----------------------------------------------------------
+# JOBS
+# ----------------------------------------------------------
 jobs:
-  # ==========================================================
-  # JOB 1: Llamada al Workflow Reutilizable de Pruebas
-  # ==========================================================
+
+  # ========================================================
+  # JOB 1 - TESTS
+  # ========================================================
   tests:
+
+    # Ejecuta el workflow reutilizable de pruebas
     uses: ./.github/workflows/tests.yml
 
-  # ==========================================================
-  # JOB 2: Construir y publicar AMBAS imágenes (Dev y Prod)
-  # ==========================================================
+  # ========================================================
+  # JOB 2 - BUILD Y PUSH DE IMÁGENES
+  # ========================================================
   build-and-push:
+
     name: Build and Push (Dev/Test & Prod)
+
+    # Espera a que los tests terminen correctamente
     needs: tests
+
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       packages: write
-      
+
     steps:
+
+      # ----------------------------------------------------
+      # Descarga código fuente
+      # ----------------------------------------------------
       - name: Checkout código
-        uses: actions/checkout@v7
-        
-      # --- METADATOS PARA LA IMAGEN DE PRODUCCIÓN ---
+        uses: actions/checkout@v4
+
+      # ----------------------------------------------------
+      # Metadatos imagen PRODUCCIÓN
+      # ----------------------------------------------------
       - name: Extraer metadatos (Prod)
         id: meta-prod
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@v5
+
         with:
           images: ${{ env.IMAGE_NAME_PROD }}
-          tags: |
-            type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
-            
-      # --- METADATOS PARA LA IMAGEN DE DESARROLLO ---
-      - name: Extraer metadatos (Dev)
-        id: meta-dev
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.IMAGE_NAME_DEV }}
+
           tags: |
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
+      # ----------------------------------------------------
+      # Metadatos imagen DEV
+      # ----------------------------------------------------
+      - name: Extraer metadatos (Dev)
+        id: meta-dev
+        uses: docker/metadata-action@v5
+
+        with:
+          images: ${{ env.IMAGE_NAME_DEV }}
+
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # ----------------------------------------------------
+      # Login a GitHub Container Registry
+      # ----------------------------------------------------
       - name: Login a GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@v3
+
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
-      # 1. BUILD Y PUSH: Imagen de Desarrollo (La que usarán Dev y Test)
+
+      # ----------------------------------------------------
+      # Construcción de imagen DEV
+      # ----------------------------------------------------
       - name: Build y push DEV (Development Stage)
-        uses: docker/build-push-action@v7
+
+        uses: docker/build-push-action@v5
+
         with:
           context: .
           push: true
-          # Usa la etapa 'development' de tu Dockerfile (incluye requirements-dev.txt)
+
+          # Usa la etapa development del Dockerfile
           target: development
+
           tags: ${{ steps.meta-dev.outputs.tags }}
 
-      # 2. BUILD Y PUSH: Imagen de Producción (Ligera, sin herramientas de test)
+      # ----------------------------------------------------
+      # Construcción de imagen PROD
+      # ----------------------------------------------------
       - name: Build y push PROD (Production Stage)
-        uses: docker/build-push-action@v7
+
+        uses: docker/build-push-action@v5
+
         with:
           context: .
           push: true
-          # Usa la etapa 'production' de tu Dockerfile (solo requirements.txt)
+
+          # Usa la etapa production del Dockerfile
           target: production
+
           tags: ${{ steps.meta-prod.outputs.tags }}
 
-  # ==========================================================
-  # JOB 3: Actualizar manifiestos de Kubernetes (GitOps)
-  # ==========================================================
+  # ========================================================
+  # JOB 3 - ACTUALIZAR MANIFIESTOS DEV Y TEST
+  # ========================================================
   update-dev-test:
+
     name: Update Dev & Test Manifests
+
     needs: build-and-push
+
     runs-on: ubuntu-latest
-    
+
     steps:
+
+      # ----------------------------------------------------
+      # Clona el repositorio GitOps
+      # ----------------------------------------------------
       - name: Checkout repo de infraestructura
-        uses: actions/checkout@v7
+
+        uses: actions/checkout@v4
+
         with:
           repository: jcruces-dev/clinica-k8s-infrastructure
           token: ${{ secrets.GH_PAT }}
           path: infra
-          
+
+      # ----------------------------------------------------
+      # Actualiza la versión de imagen en Dev y Test
+      # ----------------------------------------------------
       - name: Actualizar manifiestos (Inyectar imagen DEV)
+
         run: |
+
           cd infra
+
+          # Tag generado desde el commit actual
           DEPLOY_TAG="sha-${{ github.sha }}"
-          
-          # Busca en Dev y Test, y reemplaza la imagen por la de -dev.
-          # Nota: La regex busca 'backend-clinica-bp[opcional -dev]:algo' y lo cambia por 'backend-clinica-bp-dev:sha-...'
-          find Dev Test -type f -name "*.yaml" -exec sed -i "s|image: ghcr.io/jcruces-dev/backend-clinica-bp[^:]*:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp-dev:${DEPLOY_TAG}|g" {} +
-          
+
+          echo "Actualizando manifiestos Dev/Test..."
+
+          # ------------------------------------------------
+          # IMPORTANTE:
+          # Busca tanto archivos .yaml como .yml
+          # Esto evita problemas si mezclas ambas extensiones
+          # ------------------------------------------------
+          find Dev Test -type f \( -name "*.yaml" -o -name "*.yml" \) \
+          -exec sed -i \
+          "s|image: ghcr.io/jcruces-dev/backend-clinica-bp[^:]*:.*|image: ghcr.io/jcruces-dev/backend-clinica-bp-dev:${DEPLOY_TAG}|g" \
+          {} +
+
+      # ----------------------------------------------------
+      # Commit y push al repositorio GitOps
+      # ----------------------------------------------------
       - name: Commit y push
+
         run: |
+
           cd infra
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add .
+
           git diff --staged --quiet || git commit -m "Update Dev/Test image to DEV tag sha-${{ github.sha }}"
+
           git push
