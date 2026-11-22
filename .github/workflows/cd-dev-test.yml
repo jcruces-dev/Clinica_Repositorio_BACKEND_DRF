@@ -115,7 +115,7 @@ jobs:
       # ----------------------------------------------------
       - name: Build y push DEV (Development Stage)
 
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
 
         with:
           context: .
@@ -131,7 +131,7 @@ jobs:
       # ----------------------------------------------------
       - name: Build y push PROD (Production Stage)
 
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
 
         with:
           context: .
