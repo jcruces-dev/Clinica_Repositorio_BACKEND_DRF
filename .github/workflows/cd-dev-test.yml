@@ -69,7 +69,7 @@ jobs:
       # Descarga código fuente
       # ----------------------------------------------------
       - name: Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ----------------------------------------------------
       # Metadatos imagen PRODUCCIÓN
@@ -160,7 +160,7 @@ jobs:
       # ----------------------------------------------------
       - name: Checkout repo de infraestructura
 
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
         with:
           repository: jcruces-dev/clinica-k8s-infrastructure
