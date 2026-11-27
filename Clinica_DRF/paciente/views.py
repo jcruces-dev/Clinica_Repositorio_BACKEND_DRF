@@ -385,16 +385,16 @@ def crear_paciente_index_registrar(request):
             paciente = PacienteSerializer(data=paciente_data)
             if paciente.is_valid():
                 paciente_instancia = paciente.save()
-                correo_dato_inicial_pac_registrado(
-                    primer_nombre,
-                    segundo_nombre,
-                    ap_paterno,
-                    ap_materno,
-                    rut,
-                    username,
-                    password,
-                    email,
-                )
+                # correo_dato_inicial_pac_registrado(
+                #     primer_nombre,
+                #     segundo_nombre,
+                #     ap_paterno,
+                #     ap_materno,
+                #     rut,
+                #     username,
+                #     password,
+                #     email,
+                # )
                 # group = Group.objects.get(name='Paciente')
                 # usuario.groups.add(group)
                 paciente_id = PacienteModel.objects.get(pk=paciente_instancia.id)
@@ -568,19 +568,18 @@ def crear_paciente(request):
             if paciente.is_valid():
                 paciente_instancia = paciente.save()
                 # Enviamos los datos del paciente por correo; Nombre completo, rut, username, password.
-                print("*** Funcionando Correos Email ***")
-                correo_dato_inicial_pac_registrado(
-                    primer_nombre,
-                    segundo_nombre,
-                    ap_paterno,
-                    ap_materno,
-                    rut,
-                    username,
-                    password,
-                    email,
-                )
+                # print("*** Funcionando Correos Email ***")
+                # correo_dato_inicial_pac_registrado(
+                #     primer_nombre,
+                #     segundo_nombre,
+                #     ap_paterno,
+                #     ap_materno,
+                #     rut,
+                #     username,
+                #     password,
+                #     email,
+                # )
                 paciente_id = PacienteModel.objects.get(pk=paciente_instancia.id)
-                print(paciente_id)
                 data_direccion = {
                     "vivienda": vivienda,
                     "region": region,
