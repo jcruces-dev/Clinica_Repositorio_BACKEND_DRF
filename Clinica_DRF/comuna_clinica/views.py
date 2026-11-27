@@ -86,7 +86,6 @@ def listar_clinica_adm(request):
         clinica = ComunaClinicaModel.objects.all()
         # Serializar los datos
         serializer = ComunaClinicaSerializer(clinica, many=True)
-        # print(serializer.data)
         if serializer.data:
             return Response(
                 {"list_clinica": serializer.data},
@@ -95,9 +94,9 @@ def listar_clinica_adm(request):
             )
         else:
             return Response(
-                {"error": 1},
+                {"list_clinica": 0},
                 # Específicamos el status.
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_200_OK,
             )
     except Exception as err:
         print(f"Unexpected {err=}, {type(err)=}")
@@ -109,7 +108,6 @@ def listar_clinica_adm(request):
 @permission_classes([AllowAny])
 def crear_clinica(request):
     try:
-        print(request.data)
         data = request.data.copy()
         nombre_clinica = data.get("nombre_clinica")
         comuna_clinica = data.get("comuna_clinica")
@@ -118,7 +116,6 @@ def crear_clinica(request):
             return Response({"error": 0}, status=status.HTTP_400_BAD_REQUEST)
         # Serializar los datos
         serializer = ComunaClinicaSerializer(data=request.data)
-        print(serializer)
         if serializer.is_valid():
             serializer.save()
             # Obtener el grupo por nombre
@@ -176,6 +173,12 @@ def delete_clinica(request, id):
         # print(grupo)
         # Obtener todos los usuarios del grupo
         list_clinica = ComunaClinicaModel.objects.all()
+        if len(list_clinica) == 0:
+            return Response(
+                {"list_clinica": 0},
+                # Específicamos el status.
+                status=status.HTTP_200_OK,
+            )
         serializers = ComunaClinicaSerializer(list_clinica, many=True)
         return Response(
             {"list_clinica": serializers.data},
