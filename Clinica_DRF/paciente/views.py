@@ -2305,11 +2305,14 @@ def crear_reserva_pac_registrado_secretaria(request):
                 reserv_doc.append(
                     {
                         "title": res.especialidad,
+                        "fecha_reserva": str(res.fecha_reserva),
                         "start": res.hora_inicio,
                         "end": res.hora_termino,
                         "reserva_uuid": res.reserva_uuid,
                     }
                 )
+            print("Acá estamos devolviendo al frontend, OOJO ACÁ LKO JAIR...")
+            print(reserv_doc)
             return Response(
                 {"pacientes": reserv_doc},
                 # Específicamos el status.

@@ -1,6 +1,45 @@
 import pytest
 from rest_framework.test import APIClient
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+
+
+# Este es el test para probar la insercción a la BD desde el panel Admin.
+@pytest.mark.django_db
+def test_crear_secretaria_desde_admin(crear_clinica, crear_grupo_secretaria):
+
+    #
+    User = get_user_model()
+    admin_user = User.objects.create_user(
+        username="admin_test",
+        password="Password123!",
+        email="admin@test.com",
+        is_staff=True,
+        is_superuser=True,
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=admin_user)
+
+    url = reverse("crear_secretaria")
+    data = {
+        "username": "nueva_secre_unica",
+        "password": "123",
+        "email": "nueva@test.com",
+        "primer_nombre": "Maria",
+        "segundo_nombre": "Josefa",
+        "ap_paterno": "Gonzalez",
+        "ap_materno": "Rojas",
+        "edad": 30,
+        "sexo": "F",
+        "rut": "98.757.278-7",
+        "fono": "974699961",
+        "id_clinica": crear_clinica.id,
+    }
+
+    response = client.post(url, data, format="json")
+    print("RESPUESTA DEL SERVIDOR:", response.json())
+    assert response.status_code in (200, 201)
 
 
 #

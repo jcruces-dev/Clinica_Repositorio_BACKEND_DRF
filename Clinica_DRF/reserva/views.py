@@ -1348,10 +1348,11 @@ def historial_cli_pac_panel_secretaria(request, id):
         usuario = CustomersUsers.objects.get(pk=id)
         #
         reserva = ReservaModel.objects.filter(fk_usuario=usuario.id)
-        print(reserva)
         arr = []
         for res in reserva:
             print("Entramos")
+            print("Ojo lko jair, aca es bello")
+            print(res.fecha_reserva)
             arr.append(
                 {
                     "id_reserva": res.id,
